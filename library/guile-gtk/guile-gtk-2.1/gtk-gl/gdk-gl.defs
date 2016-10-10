@@ -1,0 +1,137 @@
+; -*- Scheme -*-
+
+;; Copyright (C) 2003, 2006 Free Software Foundation, Inc.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 3 of
+;; the License, or (at your option) any later version.
+;; 
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;; 
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+(load-scheme "gdk-gl-types.scm")
+(import "gdk-2.0.defs")
+
+;--- Types ... --------------------------------------------------------
+
+(define-struct GdkGLContext
+  (copy gdk_gl_context_ref)
+  (free gdk_gl_context_unref)
+  (size "0")
+  (canonical-name "Gdk" "GL" "Context"))
+
+(define-struct GdkGLPixmap
+  (copy gdk_gl_pixmap_ref)
+  (free gdk_gl_pixmap_unref)
+  (size "0")
+  (canonical-name "Gdk" "GL" "Pixmap"))
+
+(define-enum GdkGLConfig
+  ((gettypefuncname "NULL")) ;; no GType provided by GtkGL, apparently
+
+  ("use-gl"		GDK_GL_USE_GL)		
+  ("buffer-size"	GDK_GL_BUFFER_SIZE)	
+  ("level"		GDK_GL_LEVEL)		
+  ("rgba"		GDK_GL_RGBA)		
+  ("doublebuffer"	GDK_GL_DOUBLEBUFFER)	
+  ("stereo"		GDK_GL_STEREO)		
+  ("aux-buffers"	GDK_GL_AUX_BUFFERS)	
+  ("red-size"		GDK_GL_RED_SIZE)	
+  ("green-size"		GDK_GL_GREEN_SIZE)	
+  ("blue-size"		GDK_GL_BLUE_SIZE)	
+  ("alpha-size"		GDK_GL_ALPHA_SIZE)	
+  ("depth-size"		GDK_GL_DEPTH_SIZE)	
+  ("stencil-size"	GDK_GL_STENCIL_SIZE)	
+  ("accum-red-size"	GDK_GL_ACCUM_RED_SIZE)	
+  ("accum-green-size"	GDK_GL_ACCUM_GREEN_SIZE)
+  ("accum-blue-size"	GDK_GL_ACCUM_BLUE_SIZE)	
+  ("accum-alpha-size"	GDK_GL_ACCUM_ALPHA_SIZE))
+
+;--- Functions ... ----------------------------------------------------
+
+(define-func gdk_gl_query
+  bool
+  ())
+
+(define-func gdk_gl_get_info
+  string
+  ())
+
+(define-func gdk_gl_choose_visual
+  GdkVisual
+  ((GdkGLConfigList attribs)))
+
+(define-func gdk_gl_get_config
+  int
+  ((GdkVisual visual)
+   (GdkGLConfig attrib)))
+
+;--- GdkGLContext ... -------------------------------------------------
+
+(define-func gdk_gl_context_new
+  GdkGLContext
+  ((GdkVisual visual)))
+
+(define-func gdk_gl_context_share_new
+  GdkGLContext
+  ((GdkVisual visual)
+   (GdkGLContext share)
+   (bool direct)))
+
+(define-func gdk_gl_context_attrlist_share_new
+  GdkGLContext
+  ((GdkGLConfigList attribs)
+   (GdkGLContext share)
+   (bool direct)))
+
+(define-func gdk_gl_make_current
+  bool
+  ((GdkDrawable drawable)
+   (GdkGLContext context)))
+
+(define-func gdk_gl_swap_buffers
+  none
+  ((GdkDrawable drawable)))
+
+(define-func gdk_gl_wait_gdk
+  none
+  ())
+
+(define-func gdk_gl_wait_gl
+  none
+  ())
+
+;--- GdkGLPixmap ... ---------------------------------------------------
+
+(define-func gdk_gl_pixmap_new
+  GdkGLPixmap
+  ((GdkVisual visual)
+   (GdkPixmap pixmap)))
+
+(define-func gdk_gl_pixmap_make_current
+  bool
+  ((GdkGLPixmap glpixmap)
+   (GdkGLContext context)))
+
+(define-func gdk_gl_use_gdk_font
+  none
+  ((GdkFont font)
+   (int first)
+   (int count)
+   (int list_base)))
+
+;----------------------------------------------------------------------
+
+(options
+ (includes "#include <gdk/gdk.h>"
+	   "#include <gtkgl/gdkgl.h>"
+	   
+	   "#include \"gdk-gl-support.h\"")
+ 
+ (init-func "sgtk_init_gtk_gdk_gl_glue"))

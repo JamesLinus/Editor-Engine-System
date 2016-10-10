@@ -1,0 +1,49 @@
+Copyright (C) 2002, 2003, 2004, 2007 Free Software Foundation, Inc.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+
+* Think about symbols or keywords for signal name parameters for
+  gtk-signal-connect etc.
+
+  glade-xml-signal-(auto)connect-full creates a lot of strings with
+  signal names (and it is likely those signal names will not be
+  garbage collected - because they get trapped in closure protected by
+  signal handler...)
+
+* Make metaspline do funky things.
+
+* Think about threads protection.
+
+  As noted in the manual, there's no protection against calling gtk
+  from two threads simultaneously, and doing so can potentially crash
+  the whole program.  Ideally it shouldn't be possible to crash the
+  interpreter from scheme code.  Some sort of mutex around every
+  function could give that protection, hopefully cooperating with the
+  C-level gdk-threads-enter / gdk-threads-leave.
+
+  The problem with a mutex would be bloating the generated code, and
+  being careful to get it around the right amount of code
+  (eg. ensuring return values safely copied into scheme values), and
+  without letting scheme throws for type errors etc leaving it wrongly
+  locked.
+
+  In the past there was an SCM_DEFER_INTS around every call.  It was
+  removed because pretty sure it was only protection against signal
+  handlers running scheme code (back from guile 1.4), unrelated to gtk
+  threading.
+
+* Proper option parsing for build-guile-gtk.

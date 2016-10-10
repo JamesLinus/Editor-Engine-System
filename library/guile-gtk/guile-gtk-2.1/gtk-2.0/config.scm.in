@@ -1,0 +1,29 @@
+;; Copyright (C) 2003, 2006 Free Software Foundation, Inc.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 3 of
+;; the License, or (at your option) any later version.
+;; 
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;; 
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+(define-module (gtk-2.0 config))
+
+(define-public gtkconf-prefix "@prefix@")
+(define-public gtkconf-exec-prefix "@exec_prefix@")
+(define-public gtkconf-libdir "@exec_prefix@/lib")
+(define-public gtkconf-default-version "@GTK_VERSION@")
+(define-public gtkconf-version "2.0")
+(define-public gtkconf-gtk-2-0 #t)
+(define-public gtkconf-guile-gtk-version "@VERSION@")
+(define-public gtkconf-guilegtk-lib "-lguilegtk-2.0")
+(define-public gtkconf-guile-libs "@GUILE_LDFLAGS@")
+(define-public gtkconf-gtk-libs "@GTK_LIBS@")
+(define-public gtkconf-cc "@CC@")
+(define-public gtkconf-gtk-cflags "@GTK_CFLAGS@")

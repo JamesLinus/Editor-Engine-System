@@ -1,0 +1,1832 @@
+This is ../guile-gtk.info, produced by makeinfo version 4.11 from
+../guile-gtk.texi.
+
+This manual describes how to install and use the Guile interface to Gtk,
+version 2.1.
+
+   Copyright (C) 2003, 2004, 2005, 2006, 2007 Free Software Foundation,
+Inc.
+
+   Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+   Permission is granted to copy and distribute modified versions of
+this manual under the conditions for verbatim copying, provided that
+the entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+   Permission is granted to copy and distribute translations of this
+manual into another language, under the above conditions for modified
+versions, except that this permission notice may be stated in a
+translation approved by Free Software Foundation.
+
+INFO-DIR-SECTION GNU libraries
+START-INFO-DIR-ENTRY
+* guile-gtk: (guile-gtk).	Guile interface to Gtk.
+END-INFO-DIR-ENTRY
+
+
+File: guile-gtk.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
+
+Guile-Gtk
+*********
+
+   This manual describes how to install and use the Guile interface to
+Gtk, version 2.1.
+
+   Copyright (C) 2003, 2004, 2005, 2006, 2007 Free Software Foundation,
+Inc.
+
+   Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+   Permission is granted to copy and distribute modified versions of
+this manual under the conditions for verbatim copying, provided that
+the entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+   Permission is granted to copy and distribute translations of this
+manual into another language, under the above conditions for modified
+versions, except that this permission notice may be stated in a
+translation approved by Free Software Foundation.
+
+
+* Menu:
+
+* Introduction::
+* Installing::
+* Reporting Bugs::
+* General Conventions::
+* Gdk Module::
+* Gdk Extras::
+* Gtk Module::
+* Gtk Extras::
+* GdkPixbuf Module::
+* Glade Module::
+* Gtk GL Module::
+* Gtk GL Extras::
+* Tips and Techniques::
+* Known Bugs::
+* Obsolete Features::
+* Example Programs::
+* Internals::
+* Concept Index::
+* Function and Type Index::
+
+
+File: guile-gtk.info,  Node: Introduction,  Next: Installing,  Prev: Top,  Up: Top
+
+1 Introduction
+**************
+
+Guile-Gtk makes the Gtk+, Gdk-Pixbuf, Glade and Gtk-GL graphical user
+interface libraries available from within Guile.  (*note The Guile
+Reference Manual: (guile)Top.)
+
+   This manual makes no attempt to document those libraries, only how
+to use them from Guile.
+
+   Currently, Guile-Gtk supports Gtk version 2.0 and higher, and
+versions of Gdk-Pixbuf, Glade and Gtk-GL corresponding to that.  It's
+intended that Gnome will be supported by a new line of development
+called Guile-Gnome (`http://www.gnu.org/software/guile-gnome/').
+
+   The Guile-Gtk home page is at the following URL.  A mailing list for
+users and developers is available, see the home page for details.
+
+     `http://www.gnu.org/software/guile-gtk'
+
+   As a taste of Guile-Gtk style, here's a hello world program.  Those
+familiar with Gtk should find it straightforward.  A toplevel window is
+created, a label widget added, the result realized, and a main loop run.
+
+     (use-modules (gtk-2.0 gtk))
+
+     (define top (gtk-window-new 'toplevel))
+     (gtk-signal-connect top "destroy" gtk-exit)
+
+     (define label (gtk-label-new " Hello world! "))
+     (gtk-container-add top label)
+
+     (gtk-widget-show-all top)
+     (gtk-main)
+
+
+File: guile-gtk.info,  Node: Installing,  Next: Reporting Bugs,  Prev: Introduction,  Up: Top
+
+2 Installing
+************
+
+To build and install Guile-Gtk you will need Guile 1.6.4 or higher, and
+Glib and Gtk versions 2.0 or higher (and their various dependencies).
+Gdk-Pixbuf, Glade and Gtk-GL are optional, support for them in
+Guile-Gtk is included if they're available.
+
+   Guile-Gtk uses an Autoconf, Automake and Libtool based configuration
+system.  A basic build can be made with,
+
+     ./configure
+     make
+
+Some self-tests can be run with
+
+     make check
+
+And you can install (under `/usr/local' by default) with
+
+     make install
+
+   The file `INSTALL' has generic information about `./configure'.
+Running `./configure --help' will print a summary of the usage and
+options.
+
+`--with-gdk-pixbuf=yes/no'
+`--with-glade=yes/no'
+`--with-gtkgl=yes/no'
+     Enable or disable Gdk-Pixbuf, Glade, or Gtk-GL support,
+     respectively.  The default for each is to enable if available.
+
+`--prefix'
+     Installing under the same `--prefix' as Guile will make Guile-Gtk
+     available immediately.  If installed under a different tree it
+     will be necessary to add to `%load-path' and possibly
+     `LTDL_LIBRARY_PATH' so the modules and interface libraries can be
+     found.
+
+Threads
+     The threads method (pthreads, coop, or none) used in Guile is
+     noticed by Guile-Gtk at compile-time, and used to setup the
+     threads support within Guile-Gtk (*note General Conventions::).
+     The resulting Guile-Gtk can only be used with a Guile built with
+     the same threads method.
+
+     For Guile 1.8, where the choices are pthreads or no threads, the
+     intention is instead to notice that choice at runtime (because
+     Glib always has pthreads builtin anyway).  But as of Guile 1.8.2
+     certain threads-dependent code is inlined by Guile, so runtime
+     detection doesn't yet work.
+
+
+File: guile-gtk.info,  Node: Reporting Bugs,  Next: General Conventions,  Prev: Installing,  Up: Top
+
+3 Reporting Bugs
+****************
+
+If you think you've found a bug in Guile-Gtk, please investigate and
+make a full report.  See also *note Known Bugs::.  Include the
+following in any report,
+
+   * System and CPU type, obtained from running `./config.guess' (or
+     `uname -a' if your system is unknown).
+
+   * The versions of Guile-Gtk, Guile, Gtk and Glib, the configuration
+     options used, and if patched or packaged then say so.
+
+   * The build compiler and its version.
+
+   * A test program illustrating the problem.  Describe how to run it,
+     what it does, and what you think it should do.
+
+   * If you get a Scheme level error, include the backtrace obtained
+     from running with `guile --debug'.
+
+   * If you get a C level crash, try running under the debugger and
+     include a backtrace (`where' in GDB) if it's informative.
+
+   * If the bug is related to `./configure', then send the contents of
+     `config.log'.
+
+Send your report to <guile-gtk-general@gnu.org>.
+
+
+File: guile-gtk.info,  Node: General Conventions,  Next: Gdk Module,  Prev: Reporting Bugs,  Up: Top
+
+4 General Conventions
+*********************
+
+Unless otherwise stated, Gtk+ functions and variables are made
+available in Guile with names transformed to Scheme style.  This means
+underscores become hyphens, and only lower case is used.
+
+   For instance the C function `gtk_label_new' is `gtk-label-new' in
+Guile, or `GTK_WIDGET_FLAGS' is `gtk-widget-flags'.
+
+   The following general rules are applied to parameters and return
+values.
+
+`NULL'
+     `NULL' is represented as `#f', for functions which accept or return
+     that.
+
+`int', `gint', etc
+     All integer types are simply Guile integers.  Range checks are
+     applied to parameters, and "inexact" values are not accepted, even
+     if they happen to be integers.  (*note Exact and Inexact Numbers:
+     (guile)Exactness.)
+
+`gboolean'
+     Booleans are returned as the usual Scheme `#t' and `#f'.  For
+     parameters, any non-`#f' value is taken to be true.
+
+`GList', `GSList' etc
+     Glib lists are returned as Guile lists.  For instance
+     `gtk-container-children' returns a list of widgets.  In parameters,
+     either a Guile list or vector can be given.
+
+Arrays
+     C level arrays are returned as Guile lists.  In parameters, either
+     a Guile list or vector can be given.  For instance
+     `gtk-curve-set-vector' takes a list or vector of floats.
+
+Enumerations
+     Enumerations are represented in Guile as symbols, with names
+     corresponding to the C definitions and without the prefix
+     indicating their type.
+
+     For instance `GtkWindowType' value `GTK_WINDOW_TOPLEVEL' is just
+     the symbol `toplevel', hence a call `(gtk-window-new 'toplevel)'.
+
+Flags
+     Sets of flags (bitwise ORs at the C level) are represented in
+     Guile as a list of symbols, possibly an empty list, with names
+     corresponding to the C definitions and without the prefix
+     indicating their type.
+
+     For example a `GdkModifierType' value could be the list
+     `(shift-mask control-mask)'.
+
+Multiple return values
+     Multiple values are returned in a list.  This is the C return
+     value plus values stored through pointers.
+
+     For example at the C level `gtk_pixmap_get' returns a `GdkPixmap'
+     and a `GdkBitmap' via pointers.  Guile Gtk function
+     `gtk-pixmap-get' returns these in a two-element list.
+
+     Or for example `gdk_window_at_pointer' returns a `GdkWindow' and
+     stores an `x' and `y' through pointers.  These are returned from
+     `gdk-window-at-pointer' in a three element list.
+
+Strings
+     Gtk generally uses strings encoded in UTF-8.  Guile (versions 1.6
+     and 1.8) has no direct notion of multi-byte characters in strings,
+     so applications will need to be careful.
+
+     Converting to `GdkWChar' with `gdk-mbstowc' (*note Gdk Module::) is
+     one way to identify character boundaries at least.
+
+`GType'
+     `GType' (and `GtkType' which is the same thing) values are
+     represented as a distinct kind of Scheme level objects, except for
+     `GTK_TYPE_INVALID' which is represented as `#f'.  Types can be
+     compared with `equal?'.
+
+     As a convenience, functions expecting a `GtkType' can be passed a
+     symbol which is the name of the type.  For example,
+
+          (gtk-widget-new 'GtkLabel)
+
+     For types known to Guile Gtk (anything appearing in the defs
+     files), Guile Gtk will call the type initialization functions when
+     necessary.  Other types will be available only once relevant C
+     code has created them.
+
+`GObject'
+     Each `GObject' is represented uniquely at the Scheme level, so
+     widgets etc can be compared or hashed with `eq?'.  An object is
+     destroyed when garbage collected, if it's not otherwise in use by
+     Gtk.
+
+     Type predicates like `GTK_IS_CHECK_BUTTON' are implemented as for
+     instance `gtk-check-button?'.  There are no type checking casts
+     like in C, Guile Gtk functions expecting a particular object class
+     always check they get it or a sub-class.
+
+`GError'
+     `GError' parameters at the C level are implemented as `scm-error'
+     style throws *note Procedures for Signaling Errors: (guile)Error
+     Reporting.  For example `gdk-pixbuf-new-from-file' (*note
+     GdkPixbuf Module::) is called as
+
+          (gdk-pixbuf-new-from-file "myfile.png")
+
+     and if an error occurs it may throw for instance
+
+          (scm-error 'g-error "gdk-pixbuf-new-from-file"
+                     "Failed to open file 'myfile.png': No such file or directory"
+                     '(g-file-error-quark 4))
+
+     The data parameter is a list of error domain and code number.
+
+Threading
+     Guile Gtk programs can use Guile threads in the normal way, but
+     note that the Gtk and Gdk libraries are not thread-safe and that
+     the Guile Gtk interface has no special protection against two
+     threads calling Gtk/Gdk simultaneously.  `gdk-threads-enter' and
+     `gdk-threads-leave' are available though, and can be used the same
+     as in a C program.
+
+     Perhaps in the future additional threading protection will be
+     provided by Guile Gtk.  Presently two threads both calling Gtk/Gdk
+     can crash the interpreter, the idea would be to guard against that.
+
+
+File: guile-gtk.info,  Node: Gdk Module,  Next: Gdk Extras,  Prev: General Conventions,  Up: Top
+
+5 Gdk Module
+************
+
+The Gdk interface module can be used with
+
+     (use-modules (gtk-2.0 gdk))
+
+   A call to `gdk_init' is made automatically, an application doesn't
+need to do that itself.  Standard Gdk command line options are taken
+from the program command line (eg. `--display'), and removed from
+there, leaving other options and the rest of the command line for the
+application.  *note Runtime Environment: (guile)Runtime Environment.
+
+   Currently, the `(gtk-2.0 gdk)' module also initializes Gtk
+(`gtk_init' etc, *note Gtk Module::).  Perhaps this will change in the
+future.
+
+   The following rules apply to the various Gdk types.
+
+Predicates
+     Type predicates are implemented as for instance `gdk-window?'.
+     These test only for an object of the type, so when say a string is
+     automatically converted for `GdkFont', the corresponding
+     `gdk-font?' is false for a string, it's true only for an actual
+     font object.
+
+Equality
+     Most Gdk objects are subtypes of `GObject' and the rules for it
+     apply to them (*note General Conventions::).  But those few not
+     like this, such as `GdkFont', are not uniquely represented by a
+     single Scheme level object and so cannot be compared with `eq?'
+     (nor with `equal?').  Standard Gdk functions like `gdk-font-equal'
+     and `gdk-color-equal' can be used in the usual way though.
+
+`GdkAtom'
+     Atoms are passed and returned as Guile symbols, for example
+     `WM_NAME'.
+
+`GdkBitmap'
+     Bitmap and pixmap objects are the same type.  When a function
+     expects a bitmap currently Guile-Gtk doesn't check the depth is 1,
+     and generally an X level `BadMatch' error will occur if it's not.
+
+`GdkColor'
+     As a convenience, functions expecting a `GdkColor' object can be
+     passed a string, which will be parsed and allocated in the default
+     colormap, using `gdk-color-intern' (*note Gdk Extras::).
+
+     The following field accessors and setters are provided,
+
+      -- Function: gdk-color-red color
+      -- Function: gdk-color-blue color
+      -- Function: gdk-color-green color
+      -- Function: gdk-color-pixel color
+      -- Function: gdk-color-set-red color red
+      -- Function: gdk-color-set-blue color blue
+      -- Function: gdk-color-set-green color green
+      -- Function: gdk-color-set-pixel color pixel
+
+`GdkDragContext'
+     The following field accessors are provided,
+
+      -- Function: gdk-drag-context-action
+      -- Function: gdk-drag-context-actions
+      -- Function: gdk-drag-context-dest-window
+      -- Function: gdk-drag-context-is-source
+      -- Function: gdk-drag-context-source-window
+      -- Function: gdk-drag-context-start-time
+      -- Function: gdk-drag-context-suggested-action
+      -- Function: gdk-drag-context-targets
+
+`GdkEvent'
+     The following field accessors are provided.  Consult the Gdk
+     documentation for which fields are available in which event types.
+
+      -- Function: gdk-event-type e
+      -- Function: gdk-event-area e
+      -- Function: gdk-event-atom e
+      -- Function: gdk-event-button e
+      -- Function: gdk-event-count e
+      -- Function: gdk-event-crossing-mode e
+      -- Function: gdk-event-drag-context e
+      -- Function: gdk-event-focus e
+      -- Function: gdk-event-in e
+      -- Function: gdk-event-is-hint e
+      -- Function: gdk-event-keyval e
+      -- Function: gdk-event-notify-detail e
+      -- Function: gdk-event-send-event e
+      -- Function: gdk-event-property e
+      -- Function: gdk-event-requestor e
+      -- Function: gdk-event-selection e
+      -- Function: gdk-event-source e
+      -- Function: gdk-event-string e
+      -- Function: gdk-event-subwindow e
+      -- Function: gdk-event-target e
+      -- Function: gdk-event-time e
+      -- Function: gdk-event-window e
+      -- Function: gdk-event-x-root e
+      -- Function: gdk-event-y-root e
+
+      -- Function: gdk-event-x e
+      -- Function: gdk-event-y e
+          Mouse pointer positions as floating point numbers, eg. for
+          motion notify events.
+
+      -- Function: gdk-event-configure-x e
+      -- Function: gdk-event-configure-y e
+      -- Function: gdk-event-configure-width e
+      -- Function: gdk-event-configure-height e
+          Window position and sizes as exact integers, for a configure
+          notify event.
+
+      -- Function: gdk-event-state e
+          `GdkModifierType' flags, eg. for a key press event.
+
+      -- Function: gdk-event-visibility-state e
+          `GdkVisibilityState' symbol, for visibility notify events.
+
+      -- Function: gdk-event-message e
+      -- Function: gdk-event-message-type e
+          `gdk-event-message' returns its data as a vector of 5, 10 or
+          20 integers, according to the data format (32, 16, or 8 bits,
+          respectively).
+
+`GdkFont'
+     As a convenience, functions expecting a `GdkFont' object can be
+     passed the name of a font as a string, which will be loaded as per
+     `gdk-font-intern' (*note Gdk Extras::).
+
+`GdkPoint'
+     A points is represented as a pair `(X . Y)'.  (*note Pairs:
+     (guile)Pairs.)
+
+`GdkRectangle'
+     A rectangles is represented as a pair of pairs `((X . Y) . (WIDTH
+     . HEIGHT))'.  Notice the `(X . Y)' pair corresponds to the way a
+     `GdkPoint' is represented.
+
+`GdkSegment'
+     A segment is represented as a pair of pairs `((X1 . Y1) . (X2 .
+     Y2))'.  Notice each `(X . Y)' corresponds to the way a `GdkPoint'
+     is represented.
+
+`GdkWChar'
+     Currently `GdkWChar' values are represented as integers, and
+     `GdkWChar' strings as vectors of integers.  So for instance
+     `gdk-wcstombs' expects such a vector.
+
+     This representation might change in the future if Guile gets its
+     own notion of characters bigger than 8 bits.
+
+`GdkWindow'
+     An application must call `gdk-window-destroy' to destroy a window
+     which it created and no longer needs.  This is not done
+     automatically by the garbage collector, a window forgotten will
+     continue to exist until the program exits.  Windows from a Gtk
+     widget should not be destroyed, that's done by the widget code
+     when the widget is destroyed or unrealized.
+
+     Note that the final release of memory only actually takes place
+     under the Gtk main loop (`gtk-main' etc), so be sure it runs
+     (periodically at least) when creating and destroying.
+
+Pixels
+     Pixels are represented as integers, in the usual Gdk fashion.
+     Guile Gtk makes no attempt to track what pixels are allocated in
+     what colormaps, any management of that is left to applications.
+
+
+The following standard Gdk functions have particular notes for the
+Guile Gtk interface.
+
+ -- Function: gdk-bitmap-create-from-data window data width height
+     Return a new `GdkBitmap' of WIDTHxHEIGHT created from raw DATA
+     bytes in XBM format (which is bits of each row packed into bytes,
+     least significant bit first, and each row padded to a byte
+     boundary).  DATA can be a string, a vector of integers, or a
+     uniform vector of bytes.  In each case the length must be what
+     WIDTHxHEIGHT implies.
+
+ -- Function: gdk-color-black colormap
+ -- Function: gdk-color-white colormap
+     The return value is a `GdkColor' object with red/green/blue fields
+     set and the pixel allocated in the given COLORMAP, or `#f' if
+     allocation fails.
+
+ -- Function: gdk-colormap-alloc-colors colormap colors writable
+          bestmatch
+     COLORS is a list or vector of `GdkColor' objects which are to be
+     allocated in COLORMAP.  WRITABLE and BESTMATCH are booleans.
+
+     The `pixel' field of each `GdkColor' is changed to the allocated
+     color.  And if BESTMATCH is true then the red, green and blue
+     fields are changed to the actual color allocated.
+
+     The return is a list `(failcount statuslist)'.  FAILCOUNT is the
+     number of allocations which failed, STATUSLIST is a list of `#t' or
+     `#f' flags, one for each entry in COLORS, indicating which colors
+     were successfully allocated or not.
+
+     COLORS can contain strings, the same as other functions taking
+     `GdkColor' parameters.  In this case those entries are changed to
+     new `GdkColor' objects, with fields set as per `gdk-color-parse'.
+     Those objects are then allocated and modified as described above.
+
+ -- Function: gdk-gc-get-values gc
+     The `GdkGCValues' type is not used, instead the return is a list,
+
+          (foreground background font function fill
+           tile stipple clip-mask subwindow-mode
+           ts-x-origin ts-y-origin clip-x-origin clip-y-origin
+           graphics-exposures line-width line-style cap-style join-style)
+
+ -- Function: gdk-gc-new-with-values window [#:background color]
+          [#:cap-style cs] [#:clip-mask pixmap] [#:clip-x-origin x]
+          [#:clip-y-origin y] [#:fill fill] [#:font font]
+          [#:foreground color] [#:function f]
+          [#:graphics-exposures bool] [#:join-style js]
+          [#:line-style ls] [#:line-width n] [#:stipple pixmap]
+          [#:subwindow-mode swm] [#:tile pixmap] [#:ts-x-origin x]
+          [#:ts-y-origin y]
+     The `GdkGCValues' type is not used, instead keyword arguments are
+     taken corresponding to the fields of that structure.
+
+     For example,
+
+          (gdk-gc-new-with-values my-window
+                                  #:foreground "orange"
+                                  #:line-width 5
+                                  #:graphics-exposures #f)
+
+ -- Function: gdk-image-new-bitmap visual data width height
+     Create a `GdkImage' bitmap of WIDTHxHEIGHT using the given DATA.
+     DATA is raw byte values, either as a string, a vector of integers,
+     or a uniform vector of bytes.  In each case the length of DATA
+     must be what WIDTHxHEIGHT implies.  The data format is not well
+     documented by Gdk, but the bits of each row are packed into bytes
+     (most significant bit first), and each row padded out so the next
+     starts on a byte boundary.
+
+     DATA is copied to form the image, so changes with
+     `gdk-image-put-pixel' etc don't alter the original DATA.  (Unlike
+     at the C level, where the data space there is acquired and used
+     directly by the image.)
+
+ -- Variable: gdk-major-version
+ -- Variable: gdk-minor-version
+     These are set from the corresponding Gtk library variables
+     `gtk_major_version' and `gtk_minor_version', rather than the
+     compile-time constants `GTK_MAJOR_VERION' etc.  This means the
+     values seen in Scheme code are the library actually used at run
+     time, not merely the one Guile Gtk was compiled against.
+
+ -- Function: gdk-mbstowc str
+     Convert a string of multi-byte characters to wide characters.  The
+     return is a vector of integers (per notes for `GdkWChar' above),
+     or `#f' if conversion failed.
+
+ -- Function: gdk-pixmap-create-from-xpm window bitmaploc transpcolor
+          filename
+ -- Function: gdk-pixmap-colormap-create-from-xpm window colormap
+          bitmaploc transpcolor filename
+ -- Function: gdk-pixmap-create-from-xpm-d window bitmaploc transpcolor
+          string
+ -- Function: gdk-pixmap-colormap-create-from-xpm-d window colormap
+          bitmaploc transpcolor string
+     Return a `GdkPixmap' created from an XPM file or string data.
+
+     BITMAPLOC is a vector or list of length 1, into which the
+     `GdkBitmap' created for the transparency mask is stored.  If the
+     bitmap is not wanted, BITMAPLOC can be `#f'.
+
+ -- Function: gdk-pixmap-new drawable width height [depth]
+     DEPTH defaults to -1, meaning copy from DRAWABLE.
+
+ -- Function: gdk-rectangle-intersect rect1 rect2
+     The return is a rectangle which is the intersection of RECT1 and
+     RECT2, or `#f' for no intersection.
+
+ -- Function: gdk-set-locale
+     `gdk-set-locale' is called automatically when the `(gtk-2.0 gdk)'
+     module is loaded, so applications don't need to do so explicitly.
+
+ -- Function: gdk-window-get-deskrelative-origin window
+ -- Function: gdk-window-get-origin window
+ -- Function: gdk-window-get-position window
+ -- Function: gdk-window-get-root-origin window
+ -- Function: gdk-window-get-size window
+     Unlike other multiple-return values functions, these return a pair
+     `(X . Y)' or `(WIDTH . HEIGHT)', rather than a list.
+
+ -- Function: gdk-window-new parent width height event-mask wclass
+          wtype [#:colormap colormap] [#:cursor cursor] [#:title title]
+          [#:visual visual] [#:wmclass name class] [#:x x] [#:y y]
+     The `GdkWindowAttr' structure is not used, instead mandatory
+     fields are taken as fixed arguments, and the optional fields in
+     keyword form.  For example, for a top-level window,
+
+          (gdk-window-new #f 200 100 '(exposure-mask) 'input-output 'toplevel
+                          #:title "my window")
+
+ -- Function: gdk-window-set-geometry-hints window [#:aspect min max]
+          [#:base-size width height] [#:max-size width height]
+          [#:min-size width height] [#:pos] [#:user-pos] [#:user-size]
+          [#:win-gravity grav] [#:resize-inc width height]
+     The `GdkGeometry' structure is not used, instead optional keyword
+     arguments are taken.  The keyword names correspond to the
+     `GdkWindowHints' enumeration, and the arguments are the values for
+     the fields of the `GdkGeometry' structure.
+
+     For example,
+
+          (gdk-window-set-geometry-hints my-window
+                                         #:min-size 20 10
+                                         #:aspect 1.0 2.0
+                                         #:pos
+                                         #:win-gravity 'south-east)
+
+ -- Variable: pango-scale
+     The `PANGO_SCALE' constant.
+
+
+The following standard Gdk functions are not provided, for the reasons
+outlined.
+
+ -- Function: gdk-init
+ -- Function: gdk-init-check
+     There are no separate init functions to call, all initializations
+     are done automatically when the `(gtk-2.0 gdk)' module is loaded.
+
+ -- Function: gdk-window-get-user-data window
+ -- Function: gdk-window-set-user-data window data
+     Gtk sets the "user data" on a window to point to the associated
+     widget, and uses this for event dispatch.  Non-widget windows need
+     `NULL' to avoid another value being treated as a widget pointer.
+     On this basis the user data generally cannot be used by
+     applications.
+
+     If some sort of attached data is required then the suggestion is
+     to use Guile object properties (*note Object Properties:
+     (guile)Object Properties.).  Because the Scheme-level object is
+     kept alive as long as the window exists, such properties remain
+     until the window is destroyed.
+
+
+File: guile-gtk.info,  Node: Gdk Extras,  Next: Gtk Module,  Prev: Gdk Module,  Up: Top
+
+6 Gdk Extras
+************
+
+The following extra Gdk level functions are provided by Guile Gtk.
+
+ -- Function: gdk-color-intern color
+     If COLOR is a `GdkColor' object, return it.  If it's a string then
+     parse it using `gdk-color-parse' and allocate a pixel using
+     `gdk-color-alloc' in `gtk-widget-get-default-colormap'.
+
+     A program can use `gdk-color-intern' as an easy way to convert
+     strings to `GdkColor' objects, so as to avoid repeatedly having
+     that done when calling functions expecting a color.
+
+ -- Function: gdk-color-new
+     Return a new `GdkColor' object, with zeros in all fields.
+
+ -- Function: gdk-font-intern font
+     If FONT is a `GdkFont' object, return it.  If it's a string then
+     load that font using `gdk-font-load', throwing an error if that
+     function fails.
+
+     A program can use `gdk-font-intern' as an easy way to convert
+     strings to `GdkFont' objects, so as to avoid repeatedly having
+     that done when calling functions expecting a font.
+
+
+File: guile-gtk.info,  Node: Gtk Module,  Next: Gtk Extras,  Prev: Gdk Extras,  Up: Top
+
+7 Gtk Module
+************
+
+The Gtk interface module can be used with
+
+     (use-modules (gtk-2.0 gtk))
+
+   Calls to `gtk_init' and `gtk_set_locale' are made automatically, an
+application doesn't need to make them itself.  Standard Gtk command line
+options are taken from the program command line (eg. `--gtk-module'),
+and removed from there, leaving other options and the rest of the
+command line for the application.  *note Runtime Environment:
+(guile)Runtime Environment.
+
+   The following rules apply to the various Gtk types.
+
+`GtkAdjustment'
+     The following field accessors and setters are provided.
+
+      -- Function: gtk-adjustment-value adj
+      -- Function: gtk-adjustment-lower adj
+      -- Function: gtk-adjustment-upper adj
+      -- Function: gtk-adjustment-step-increment adj
+      -- Function: gtk-adjustment-page-increment adj
+      -- Function: gtk-adjustment-page-size adj
+
+      -- Function: gtk-adjustment-set-lower adj val
+      -- Function: gtk-adjustment-set-upper adj val
+      -- Function: gtk-adjustment-set-step-increment adj val
+      -- Function: gtk-adjustment-set-page-increment adj val
+      -- Function: gtk-adjustment-set-page-size adj val
+          These only set the respective fields, it's up to an
+          application to emit the standard `changed' signal when ready
+          (eg. using `gtk-adjustment-changed').
+
+          Note that `gtk-adjustment-set-value' is instead the
+          corresponding standard Gtk function.  It sets the value field
+          and emits the `value_changed' signal.
+
+`GtkCList'
+     The following field accessors are provided.
+
+      -- Function: gtk-clist-selection clist
+          Return a list of integers, being the selected rows.
+
+`GtkResponseType'
+     Values for `GtkResponseType' are represented just as integers, and
+     in particular are passed that way in the `GtkDialog' `response'
+     signal.  The following variables hold pre-defined values.
+
+      -- Variable: gtk-response-none
+      -- Variable: gtk-response-reject
+      -- Variable: gtk-response-accept
+      -- Variable: gtk-response-delete-event
+      -- Variable: gtk-response-ok
+      -- Variable: gtk-response-cancel
+      -- Variable: gtk-response-close
+      -- Variable: gtk-response-yes
+      -- Variable: gtk-response-no
+      -- Variable: gtk-response-apply
+      -- Variable: gtk-response-help
+
+`GtkStyle'
+     The following field accessors are provided.
+
+      -- Function: gtk-style-white st
+      -- Function: gtk-style-black st
+      -- Function: gtk-style-fg st
+      -- Function: gtk-style-bg st
+      -- Function: gtk-style-light st
+      -- Function: gtk-style-dark st
+      -- Function: gtk-style-mid st
+      -- Function: gtk-style-text st
+      -- Function: gtk-style-base st
+          Return `GdkColor' objects.
+
+      -- Function: gtk-style-white-gc st
+      -- Function: gtk-style-black-gc st
+      -- Function: gtk-style-fg-gc st
+      -- Function: gtk-style-bg-gc st
+      -- Function: gtk-style-light-gc st
+      -- Function: gtk-style-dark-gc st
+      -- Function: gtk-style-mid-gc st
+      -- Function: gtk-style-text-gc st
+      -- Function: gtk-style-base-gc st
+          Return `GdkGC' objects.
+
+Signals
+     Signal names are strings, the same as at the C level, for instance
+     `"clicked"' or `"map_event"'.
+
+     Signal handler procedures are passed the same parameters as the C
+     code functions, except the object and client-data are omitted.
+     The return value is used when the signal expects a return value.
+
+     For instance the `clicked' signal from a `GtkButton' passes no
+     parameters,
+
+          (define (my-click-handler)
+            (display "hello\n"))
+          (gtk-signal-connect button "clicked" my-click-handler)
+
+     Or an `expose_event' passes just a `GdkEvent', and expects a return
+     value.
+
+          (define (my-expose-handler)
+            (do-some-drawing)
+            #f)  ;; propagate event to other handlers
+          (gtk-signal-connect drawarea "expose_event" my-expose-handler)
+
+     The object and client data parameters in the C level calls are
+     deliberately omitted.  Such things can be handled in a more
+     Scheme-like and flexible way with a closure, ie. captured
+     variables with desired values (*note The Concept of Closure:
+     (guile)About Closure.).
+
+     Signal handler calls are made via a trampoline to facilitate error
+     handling, *note Gtk Extras::.
+
+
+The following standard Gtk functions have particular notes for the
+Guile Gtk interface.
+
+ -- Function: gtk-box-pack-start box child [expand [fill [padding]]]
+ -- Function: gtk-box-pack-end box child [expand [fill [padding]]]
+     EXPAND and FILL default to `#f', PADDING defaults to 0.
+
+ -- Function: gtk-color-selection-get-color colorsel
+     Return a `GdkColor' object with red, green and blue fields set to
+     the current colour from COLORSEL.  The colour is not allocated in
+     any colormap and the pixel field is zero.
+
+     Note that unfortunately this is not the same as the C function
+     `gtk_color_selection_get_color', but instead like the Gtk 2
+     `gtk_color_selection_get_current_color'.
+
+ -- Function: gtk-color-selection-set-color colorsel color
+     Set the current colour in COLORSEL to the red, green and blue
+     fields of the given `GdkColor' object.  The opacity is set to 1.0,
+     when in use.
+
+     Note that unfortunately this is not the same as the C function
+     `gtk_color_selection_set_color', but instead like the Gtk 2
+     `gtk_color_selection_set_current_color'.
+
+ -- Function: gtk-exit [exitcode]
+     EXITCODE defaults to 0, meaning normal successful termination.
+
+ -- Function: gtk-idle-add proc
+ -- Function: gtk-idle-add-priority priority proc
+ -- Function: gtk-idle-add-full priority proc
+     As per the signal handlers, there's no "data" parameter to the idle
+     callbacks.  PROC is simply called `(PROC)' and should return
+     non-`#f' to continue being called, or `#f' to stop.
+
+     Currently there's no destroy notify callback procedure for
+     `gtk-idle-add-full', perhaps this will change in the future.
+
+ -- Function: gtk-input-add port inputconds proc
+     Register PROC to be called when INPUTCONDS is satisfied on PORT,
+     and return the input source ID.
+
+     As per the signal handlers, there's no "data" parameter to the
+     input handler, it's called as `(PROC fdes conds)'.
+
+     This function doesn't offer the destroy notify callback available
+     from `gtk_input_add_full', perhaps this will change in the future.
+
+ -- Function: gtk-main
+ -- Function: gtk-main-iteration
+ -- Function: gtk-main-iteration-do
+     In a signal handler or other callback, an application cannot use
+     an exception or new continuation to escape from `gtk-main' and
+     friends, since Gtk has no understanding of such things.  There are
+     no restrictions on control flow within a callback, just on
+     escaping out of it.
+
+     One possibility for applications wanting such things is to have an
+     explicit loop calling `gtk-main-iteration' and hold a list of
+     pending actions to be taken outside that function.  This is done
+     in the sample program `continuations.scm' (*note Example
+     Programs::).  The callback trampoline feature might be able to
+     help with this (*note Gtk Extras::).
+
+ -- Function: gtk-menu-popup menu parentmenushell parentmenuitem button
+          time
+     There's no position function accepted, instead `NULL' is used,
+     which means put the menu under the current mouse position.
+     Perhaps this will change in the future.
+
+ -- Function: gtk-object-get object prop
+     Get an object property.  The PROP property name can be either a
+     keyword or symbol.  The property value is returned, or `#f' if
+     there's no such property or it cannot be read.
+
+     `gtk-object-get' only gets one property value, unlike the C
+     function `gtk_object_get' which can get multiple property values
+     in one call.
+
+ -- Function: gtk-object-new type [prop value]...
+ -- Function: gtk-object-set object [prop value]...
+ -- Function: gtk-widget-new type [prop value]...
+ -- Function: gtk-widget-set widget [prop value]...
+     The PROP property names are taken as either keywords or symbols,
+     followed by suitable values.  This is in contrast to the C
+     functions, where strings are used for property names.  For example,
+
+          (gtk-widget-new 'GtkButton #:label "some words" #:relief 'half)
+
+     The values set are type checked and converted in the usual way,
+     they must correspond to the property type.
+
+ -- Variable: gtk-major-version
+ -- Variable: gtk-minor-version
+ -- Variable: gtk-micro-version
+ -- Variable: gtk-binary-age
+ -- Variable: gtk-interface-age
+     These are set from the corresponding Gtk library variables
+     `gtk_major_version' etc, rather than the compile-time constants
+     `GTK_MAJOR_VERION' etc.  This means the values seen in Scheme code
+     are the library actually used at run time, not merely the one
+     Guile Gtk was compiled against.
+
+ -- Function: gtk-pixmap-new pixmap [bitmap]
+ -- Function: gtk-pixmap-set pixmap [bitmap]
+     BITMAP defaults to `#f', meaning no mask.
+
+ -- Function: gtk-scrolled-window-new [hadjustment [vadjustment]]
+     HADJUSTMENT and VADJUSTMENT default to `#f', meaning create new
+     adjustment objects.
+
+ -- Function: gtk-set-locale
+     `gtk-set-locale' is called automatically when the `(gtk gtk)'
+     module is loaded, so applications don't need to do so explicitly.
+
+ -- Function: gtk-signal-connect object name func [objectsignal [after]]
+     OBJECTSIGNAL has no purpose and should always be `#f', which is its
+     default.  AFTER defaults to `#f', meaning FUNC is called before
+     OBJECT runs the default handler for this signal.
+
+     It will be noted that `gtk-signal-connect' has the OBJECTSIGNAL and
+     AFTER parameters like `gtk_signal_connect_full', but currently
+     there's no access to the destroy notify callback.
+
+ -- Function: gtk-table-attach table child left right top bottom [xopts
+          [yopts [xpad [ypad]]]]
+     XOPTS and YOPTS each default to `(expand fill)', XPAD and YPAD
+     default to 0.
+
+ -- Function: gtk-text-insert text font foreground background string
+          [length]
+     The default LENGTH is -1, meaning the whole STRING.
+
+ -- Function: gtk-widget-size-request widget
+     The requisition is returned as a pair `(WIDTH . HEIGHT)'.
+
+
+The following standard Gtk functions are not provided.
+
+ -- Function: gtk-container-foreach
+     This iterator is not provided, instead the suggestion is to apply
+     the standard Scheme `for-each' to the return from
+     `gtk-container-children'.  (That's probably how
+     `gtk-container-foreach' would be implemented anyway, to make it
+     safe for continuations and exceptions.)
+
+ -- Function: gtk-init
+     There is no separate init function to call, all initializations
+     are done automatically when the `(gtk gtk)' module is loaded.
+
+
+File: guile-gtk.info,  Node: Gtk Extras,  Next: GdkPixbuf Module,  Prev: Gtk Module,  Up: Top
+
+8 Gtk Extras
+************
+
+The following extra Gtk level functions are provided by Guile Gtk.
+
+ -- Function: gtk-callback-trampoline [tramp]
+     Get or set the trampoline procedure for Gtk callbacks.  With no
+     arguments, the current trampoline is returned.  With an argument,
+     the trampoline procedure is set, and the old procedure returned.
+
+     When making a callback for signals etc, Guile Gtk goes through this
+     trampoline.  TRAMP is called as `(TRAMP proc args)', where `proc'
+     is the application procedure to call, and `args' is a list of
+     arguments for it (possibly empty).  A minimal trampoline would be,
+
+          (define (my-trampoline proc args)
+            (apply proc args))
+
+     (which of course is just `apply' itself, no need for a new
+     definition).
+
+     The default trampoline uses `catch' to trap errors from the
+     callback, and displays them in a window (*note Catching
+     Exceptions: (guile)Catch.).  The aim is to give the user some
+     feedback in the GUI about what has gone wrong, rather than
+     suddenly terminating.  An application can set a new trampoline to
+     do this in its preferred way.
+
+ -- Function: gtk-class-new type name
+     Return a new `GtkType' with the given NAME (a string), created as a
+     sub-class of TYPE.
+
+     Instances of the new type can be created with `gtk-widget-new' in
+     the usual way.  The new type has the same size as the given TYPE,
+     there's no mechanism to add extra data fields.  (The suggestion
+     would be to use Guile object properties for such things, *Note
+     Object Properties: (guile)Object Properties.)
+
+     The main advantage of a new class is that it can be type checked
+     in a fashion similar to other Gtk objects.  For instance,
+
+          (define my-foo-button-type
+            (gtk-class-new 'GtkButton "MyFooButton")))
+
+          (define (my-foo-button-new)
+            (gtk-widget-new my-foo-button-type #:label "something")))
+
+          (define (my-foo-button? obj)
+            (gtk-check-type obj my-foo-button-type))
+
+          (define (my-foo-button-dosomething obj)
+            (or (my-foo-button? obj)
+                (error "Wrong object type: ~a" obj))
+            ...)
+
+     It also works to use 'MyFooButton like the builtin types, instead
+     of holding the type in `my-foo-button-type'.
+
+ -- Function: gtk-list-append-item list listitem
+ -- Function: gtk-list-prepend-item list listitem
+     Append or prepend a single item to a `GtkList'.
+
+ -- Function: gtk-pixmap-new-from-file filename parent
+     Return a new `GtkPixmap' widget, containing an XPM image loaded
+     from FILENAME as per `gdk-pixmap-colormap-create-from-xpm'.
+     PARENT is an intended parent widget, used to get the colormap for
+     the image.
+
+ -- Function: gtk-signal-new-generic name flags objtype rettype
+          paramtypes
+     Create a new signal NAME for use by OBJTYPE and return the signal
+     ID (an integer).  FLAGS is `GtkSignalRunType' flags, RETTYPE is
+     the return type for the handler, and PARAMTYPES is a list of
+     parameter types for it (`GType' values or symbols).
+
+     This function is like the C function `gtk_signal_newv', but
+     doesn't setup any particular marshaller, rather it's for use with
+     Scheme level handlers which are invoked "generically" based on the
+     type information provided.
+
+     For instance the following adds a new signal to `GtkAdjustment',
+     taking a string and a boolean as parameters.  Clearly Gtk itself
+     won't use or emit something like this, it'd just be for an
+     application.
+
+          (gtk-signal-new-generic "big_change_soon" '(no-recurse)
+                                  'GtkAdjustment
+                                  'void '(GtkString gboolean))
+
+
+The following functions are provided by
+
+     (use-modules (gtk threads))
+
+ -- Function: gtk-threads-ensure-handler
+     Start a Gtk main loop in a new Guile thread, if this function has
+     not previously done that.  This is a convenient way for an
+     application to ensure a main loop exists, but continue with other
+     things.
+
+     The main loop is started within a `gdk-threads-enter' /
+     `gdk-threads-leave' pair in the standard way for a threaded
+     program, as per the following.
+
+          (gdk-threads-enter)
+          (gtk-main)
+          (gdk-threads-leave)
+
+ -- Function: gtk-threads-handler?
+     Return true if `gtk-threads-ensure-handler' has started a Gtk main
+     loop.
+
+
+File: guile-gtk.info,  Node: GdkPixbuf Module,  Next: Glade Module,  Prev: Gtk Extras,  Up: Top
+
+9 GdkPixbuf Module
+******************
+
+The GdkPixbuf interface module can be used with
+
+     (use-modules (gtk-2.0 gdk-pixbuf))
+
+   Currently, the `(gtk-2.0 gdk-pixbuf)' module also initializes Gtk
+(`gtk_init' etc, *note Gtk Module::).  Perhaps this will change in the
+future.
+
+   The following standard GdkPixbuf functions have particular notes for
+the Guile Gtk interface.
+
+ -- Function: gdk-pixbuf-render-threshold-alpha p b sx sy dx dy w h a
+ -- Function: gdk-pixbuf-render-to-drawable p d g sx sy dx dy w h di xd
+          yd
+ -- Function: gdk-pixbuf-render-to-drawable-alpha p d sx sy dx dy w h
+          am a di xd yd
+     `gdk_rgb_init' is called automatically, so there's no need for
+     applications do that explicitly.
+
+
+   The various Xlib specific GdkPixbuf functions (`gdk_pixbuf_xlib_init'
+etc) are not provided, since Xlib level operations are not considered a
+primary part of Guile Gtk.
+
+
+File: guile-gtk.info,  Node: Glade Module,  Next: Gtk GL Module,  Prev: GdkPixbuf Module,  Up: Top
+
+10 Glade Module
+***************
+
+The Glade interface module can be used with
+
+     (use-modules (gtk-2.0 glade))
+
+   The following rules apply to the various Glade types.
+
+`GladeXML'
+     `GladeXML' is a sub-class of `GObject' so the notes about it apply
+     (*note General Conventions::).  The following field accessors are
+     provided,
+
+      -- Function: glade-xml-filename gx
+
+
+The following standard Glade functions have particular notes for the
+Guile Gtk interface.
+
+ -- Function: glade-xml-new filename [root]
+     The default ROOT is `#f', meaning create the whole interface
+     defined in FILENAME.
+
+ -- Function: glade-xml-signal-connect-full gladexml name [proc]
+ -- Function: glade-xml-signal-autoconnect-full gladexml [proc]
+     As per the Gtk signal handlers, there's no "user data" parameter to
+     PROC.  PROC is called `(PROC handlername object signalname
+     signaldata connectobject after?)'.
+
+     If PROC is not given, or is `#f', the default is to connect
+     SIGNALNAME on CONNECTOBJECT (or OBJECT if no CONNECTOBJECT) to the
+     procedure HANDLERNAME.  HANDLERNAME is evaluated as Scheme code,
+     and so can simply be the name of a Scheme procedure, or it can be
+     a `lambda' form or similar evaluating to a procedure.
+
+
+File: guile-gtk.info,  Node: Gtk GL Module,  Next: Gtk GL Extras,  Prev: Glade Module,  Up: Top
+
+11 Gtk GL Module
+****************
+
+The Gtk GL interface module can be used with
+
+     (use-modules (gtk-2.0 gtk-gl-area))
+     (use-modules (gtk-2.0 gdk-gl))
+
+   The following rules apply to the various Gtk GL types.
+
+Attributes
+     The attributes for `gtk-gl-area-new' and similar are taken as a
+     list of symbols such as red-size for `GDK_GL_RED_SIZE', and integer
+     values following them (when appropriate).  For example,
+
+          (gdk-gl-choose-visual '(doublebuffer buffer-size 123))
+
+
+File: guile-gtk.info,  Node: Gtk GL Extras,  Next: Tips and Techniques,  Prev: Gtk GL Module,  Up: Top
+
+12 Gtk GL Extras
+****************
+
+The following extra Gtk GL level functions are provided by Guile Gtk.
+
+ -- Function: gtk-gl-area-make-current-force area
+     Make the given AREA current, throwing an error if this fails.
+
+ -- macro: with-gl-area area body...
+ -- macro: with-render-to-gl-area area body...
+     Evaluate the BODY forms with AREA made current.  An error is
+     thrown if AREA cannot be set.
+
+     `with-gl-area' just sets the area, `with-render-to-gl-area' in
+     addition calls `gtk-gl-area-swap-buffers' after BODY, to display
+     whatever BODY may have drawn to the back buffer.
+
+
+File: guile-gtk.info,  Node: Tips and Techniques,  Next: Known Bugs,  Prev: Gtk GL Extras,  Up: Top
+
+13 Tips and Techniques
+**********************
+
+`app'
+     Don't be tempted to make a `(define app ...)' for a top-level
+     application widget or similar.  In Guile 1.6.4 `app' is used for
+     the implementation of the module system and a new binding will
+     stop `use-modules' working.
+
+`primitive-fork'
+     When forking a child process, care should be taken that the child
+     doesn't call any Gtk functions, since the child has a `dup' of the
+     X server connection and doing anything on it will upset the
+     parent's communications, probably causing a crash.
+
+     Or the parent could leave the connection alone and let the child
+     use it.  The point is that only one of the two may use it.  This
+     is the same as in a C program.
+
+     Gtk sets up certain `atexit' handlers to shutdown its server
+     connection, and these mustn't run in the child either.  In Guile
+     1.8.1 and higher `primitive-_exit' (*note Processes:
+     (guile)Processes.) can be used to exit without running those
+     handlers.  In earlier versions the suggestion is for a child to
+     exec a do-nothing program when it wants to exit (either normally
+     or for some exception).  Eg. an error exit,
+
+          (execl "/bin/false" "/bin/false")
+
+     For reference, the current implementation of `(ice-9 popen)' is
+     safe, provided no errors are encountered in the child setups or
+     spawning of `/bin/sh'.
+
+Multiple return values
+     When working with the Guile Gtk functions returning multiple
+     values it can be convenient to get those into separate variables.
+     One easy way is for instance,
+
+          (define (list-apply lst proc)
+            (apply proc lst))
+
+          (list-apply (gtk-accelerator-parse str)
+            (lambda (key mods)
+              ...))
+
+     Or for instance the same with a syntax similar to `receive' (*note
+     Returning and Accepting Multiple Values: (guile)Multiple Values.),
+
+          (define-macro (receive-list vars expr . body)
+            `(apply (lambda ,vars ,@body) ,expr))
+
+          (receive-list (key mods)
+              (gtk-accelerator-parse str)
+            ...)
+
+
+File: guile-gtk.info,  Node: Known Bugs,  Next: Obsolete Features,  Prev: Tips and Techniques,  Up: Top
+
+14 Known Bugs
+*************
+
+`GtkEditable' `insert-text' signal
+     The callback for the `insert-text' signal from a `GtkEditable'
+     doesn't respect the length for the new text, and doesn't provide a
+     means to modify the position (which is an in/out parameter).
+
+     This may change in the future, probably to a single string
+     parameter for the text and some sort of modifiable location for
+     the position (a one element vector perhaps).
+
+
+File: guile-gtk.info,  Node: Obsolete Features,  Next: Example Programs,  Prev: Known Bugs,  Up: Top
+
+15 Obsolete Features
+********************
+
+The following functions are considered obsolete and are not recommended
+for use in new programs.
+
+ -- Function: gtk-standalone?
+     Return true if Guile Gtk is running as a standalone program.  This
+     is now always true.
+
+     In the past a `gtk-guile' executable existed and had an option to
+     indicate that an interactive read-eval-print loop should be
+     started, in which case `gtk-standalone?' returned `#f'.
+
+ -- Function: gtk-standalone-main top-widget
+     When running standalone (`gtk-standalone?' true), run `gtk-main'
+     and connect the `destroy' signal of TOP-WIDGET to `gtk-exit' so
+     the program will exit when that widget is destroyed.  If not
+     standalone, do nothing and return immediately.
+
+     Since `gtk-standalone?' is now always true, an application can
+     just as easily connect the signal and run `gtk-main' itself.
+
+          (gtk-signal-connect top-widget "destroy" gtk-exit)
+          (gtk-main)
+
+
+File: guile-gtk.info,  Node: Example Programs,  Next: Internals,  Prev: Obsolete Features,  Up: Top
+
+16 Example Programs
+*******************
+
+The `examples' subdirectory in the sources contains various programs
+illustrating Guile Gtk.  Once Guile Gtk is installed each can be run
+with for instance
+
+     guile -s calc.scm
+
+`calc.scm'
+     A HP48 style desk calculator.  It takes quite a bit of code to
+     setup all the widgets, but there's plenty of comments.
+
+     A `.calcrc' in the user's home directory can add new buttons.  The
+     ability to load user extensions is a powerful feature and a
+     significant advantage Guile Gtk has over the regular C interface
+     to Gtk.
+
+`calendar.scm'
+     A tiny program showing the `GtkCalendar' widget.
+
+`clist.scm'
+     Display the `/etc/passwd' file in a window.  (You might need to
+     enlarge the window manually.)
+
+`continuations.scm'
+     Illustrate the use of Scheme continuations to resume application
+     code when a dialog is answered, all the while running the usual
+     Gtk main loop.
+
+`hello-world.scm'
+     A simple program creating a button printing a familiar message.
+
+`metaspline.scm'
+     A Metafont style bezier spline curve editor, using the Gdk drawing
+     primitives.
+
+`simple.scm'
+     A simple program with a label and a button.
+
+`simple.glade', `run-glade.scm'
+     A simple Glade application.  Notice the use of `lambda' forms in
+     the signal handlers.  `run-glade.scm' loads and runs a glade
+     application, for instance
+
+          guile -s run-glade.scm simple.glade
+
+`test-dnd.scm'
+`test-gdk.scm'
+`test-glade.scm'
+`test-gtk.scm'
+     Test programs for drag-and-drop, Gdk, Glade and Gtk respectively.
+     These are primarily for the developers' use, but can be run to see
+     something happen and to test Guile Gtk is working.
+
+`tictactoe.scm'
+     Illustrate the use of `gtk-class-new' to create a tic-tac-toe
+     widget.  There's no actual "X" and "O" markers, only three squares
+     in a row recognised as a win.
+
+
+File: guile-gtk.info,  Node: Internals,  Next: Concept Index,  Prev: Example Programs,  Up: Top
+
+17 Internals
+************
+
+17.1 `GObject'
+==============
+
+Objects of type `GObject' and its subclasses are wrapped using a
+`gtkobj' smob.  This smob is called the proxy for the object.  It holds
+the C pointer and it adds 1 to the reference count of the object.  The
+proxy is kept alive as long as the object exists.  When the proxy is no
+longer used from Scheme, and the object is also unused from anywhere in
+Gtk, then the proxy and object are destroyed together.
+
+   The proxy keeps a list of "protects" which are Scheme procedures
+installed as callbacks by `gtk-signal-connect' etc.  Those protects are
+kept alive as long as the object lives but of course they're not
+themselves a reason to keep the object alive, an object with callbacks
+can still be garbage collected.  A similar global list of protects is
+used for callbacks on global things like like `gtk-timeout-add'.
+
+   Some care must be taken with garbage collection.  Objects in use
+from Scheme variables etc are marked in the usual way, and then for
+`GtkContainer' widgets marking recurses through the children too (any
+with proxies).  Proxied objects still in use from Gtk C code are then
+identified by looking at their reference counts.  A count of more than
+the 1 which the proxy puts plus another 1 if it's in a proxied
+container means that somebody somewhere is holding a reference to the
+object in a way that Guile-Gtk's marking has not traversed.  Such a
+reference is called "external" and objects with external references are
+marked (and thus kept alive).
+
+   It might be wondered if just waiting for an object to have a
+reference count of 1 (its proxy) would be enough to know it can be
+garbage collected (when unreachable from Scheme).  In such a system a
+container with refcount 1 would be collected, and then on the next GC
+its children would be down to a count of 1 to be collected too.  But
+attached signal handler procedures can stop that from working.
+Consider container C holding widget W, and a Scheme code signal handler
+H connected to W and which acts on C.  W has a refcount 2 and would be
+kept alive, so its handler H must be kept, and H refers to C, so C is
+kept, ie. none of the three is ever collected.  The key is that
+refcount 2 is not in fact an absolute reason to keep W alive, rather
+it's a reference from C and so ought to depend on whether C is to be
+kept.  Circular references like this occur all the time in Lisp and the
+way to treat them is to let marking recurse through all genuinely
+wanted objects, leaving unwanted objects all collected together, no
+matter what clusters of possibly circular references they might have
+between themselves.
+
+   Strictly speaking to be completely safe against circular references
+Guile-Gtk would have to know and follow all references Glib and Gtk
+establish between objects.  But in practice just `GtkContainer'
+children is enough, because Gtk's references normally form a tree, it's
+only Scheme signal handlers referring up to parent container widgets
+which create cycles.
+
+17.2 Boxed objects
+==================
+
+Objects which are not sub-classes of `GObject' are handled by a simpler
+"boxing" system.  This includes resources like `GdkCursor', and types
+that are more or less user-level structures like `GdkRegion'.
+
+   A `gtkboxed' smob holds the C pointer to the object plus its type in
+the form of an index into the Guile-Gtk `type_info_tab' table.  That
+table holds the `GType' value plus certain other information.
+
+   Boxed types each have their own specific `ref'/`unref' functions,
+declared explicitly in the `.defs' file, such as `gdk_cursor_ref'.
+When a smob is created a reference is added, so the object stays alive
+while in use from Scheme.  When the smob is garbage collected, the
+unref function is called.  Because there's no signal handlers attached
+to boxed objects the circular references problem for `GObject' above
+doesn't occur.
+
+   In the current code, whenever a boxed type is returned a new smob is
+created for it.  No attempt is made to find and re-use an existing smob
+holding the same pointer (and type).  This is simple, but it's also the
+reason boxed types can't be compared with `eq?'.  A smob "equalp"
+function could compare pointers, but it's not clear if that would be
+the best thing.  `equal?' normally looks into the contents of objects,
+so one might want it for instance to test whether two `GdkRegion's are
+the same area, or something like that, instead of only the same object.
+
+17.3 `GType'
+============
+
+`GType's are represented by a smob holding the `GType' value (an
+integer, though actually it's a pointer Glib has converted to an
+integer).  `GType' values are never destroyed, so there's no ref/unref
+to apply.  A new smob is created whenever a `GType' is returned, no
+attempt is made to find and re-use an existing smob for it.  A smob
+equality function allows types to be compared with `equal?'.
+
+   Guile-Gtk functions taking a `GType' also accept a Scheme symbol,
+with the name looked up to get the actual `GType' value to pass down to
+C.  `g_type_from_name' gives types which have been initialized (or are
+builtin), and in addition Guile-Gtk has a table of `get_type' functions
+to call, such as `gtk_vbox_get_type' for `GtkVBox'.  But that table is
+limited to the types appearing in the `.defs' files, there's nowhere in
+Glib or Gtk recording the names of all initializable types and classes.
+
+
+File: guile-gtk.info,  Node: Concept Index,  Next: Function and Type Index,  Prev: Internals,  Up: Top
+
+Concept Index
+*************
+
+ [index ]
+* Menu:
+
+* --display:                             Gdk Module.          (line  10)
+* Adjustments:                           Gtk Module.          (line  20)
+* app:                                   Tips and Techniques. (line   7)
+* Arrays:                                General Conventions. (line  36)
+* Atoms:                                 Gdk Module.          (line  38)
+* Bitmaps:                               Gdk Module.          (line  42)
+* Booleans:                              General Conventions. (line  27)
+* Boxed objects:                         Internals.           (line  59)
+* Bugs:                                  Reporting Bugs.      (line   6)
+* Bugs, known:                           Known Bugs.          (line   6)
+* calc.scm:                              Example Programs.    (line  12)
+* Calculator:                            Example Programs.    (line  12)
+* calendar:                              Example Programs.    (line  21)
+* Calendar:                              Example Programs.    (line  21)
+* Callbacks <1>:                         Gtk Extras.          (line   9)
+* Callbacks:                             Gtk Module.          (line  91)
+* Characters:                            Gdk Module.          (line 147)
+* Check:                                 Installing.          (line  17)
+* CList:                                 Gtk Module.          (line  43)
+* clist.scm:                             Example Programs.    (line  24)
+* Colours:                               Gdk Module.          (line  47)
+* Command line <1>:                      Gtk Module.          (line  10)
+* Command line:                          Gdk Module.          (line  10)
+* Configure:                             Installing.          (line  11)
+* Continuations:                         Gtk Module.          (line 174)
+* Continuations example:                 Example Programs.    (line  28)
+* continuations.scm:                     Example Programs.    (line  28)
+* Conventions:                           General Conventions. (line   6)
+* Destroying windows:                    Gdk Module.          (line 155)
+* Display:                               Gdk Module.          (line  10)
+* Drag context:                          Gdk Module.          (line  63)
+* Enumerations:                          General Conventions. (line  41)
+* Equality <1>:                          Gdk Module.          (line  30)
+* Equality:                              General Conventions. (line  94)
+* Error handler:                         Gtk Extras.          (line   9)
+* Events:                                Gdk Module.          (line  75)
+* Example programs:                      Example Programs.    (line   6)
+* Exceptions:                            Gtk Module.          (line 174)
+* Exit:                                  Gtk Module.          (line 149)
+* Flags:                                 General Conventions. (line  49)
+* Fonts:                                 Gdk Module.          (line 128)
+* Fork:                                  Tips and Techniques. (line  13)
+* Gdk extras:                            Gdk Extras.          (line   6)
+* Gdk module <1>:                        Gdk Extras.          (line   6)
+* Gdk module:                            Gdk Module.          (line   6)
+* GdkPixbuf module:                      GdkPixbuf Module.    (line   6)
+* GError:                                General Conventions. (line 105)
+* Glade examples:                        Example Programs.    (line  43)
+* Glade module:                          Glade Module.        (line   6)
+* Glib objects:                          General Conventions. (line  94)
+* GObject:                               Internals.           (line   6)
+* Gtk extras:                            Gtk Extras.          (line   6)
+* Gtk GL attributes:                     Gtk GL Module.       (line  14)
+* Gtk GL extras:                         Gtk GL Extras.       (line   6)
+* Gtk GL module <1>:                     Gtk GL Extras.       (line   6)
+* Gtk GL module:                         Gtk GL Module.       (line   6)
+* Gtk module <1>:                        Gtk Extras.          (line   6)
+* Gtk module:                            Gtk Module.          (line   6)
+* Gtk objects:                           General Conventions. (line  94)
+* GtkType:                               Internals.           (line  87)
+* GType:                                 Internals.           (line  87)
+* Hashing:                               General Conventions. (line  94)
+* Hello world example <1>:               Example Programs.    (line  34)
+* Hello world example:                   Introduction.        (line  27)
+* hello-world.scm:                       Example Programs.    (line  33)
+* Home page:                             Introduction.        (line  18)
+* Initialization <1>:                    Gtk Module.          (line  10)
+* Initialization:                        Gdk Module.          (line  10)
+* Installing:                            Installing.          (line   6)
+* Integers:                              General Conventions. (line  21)
+* Internals:                             Internals.           (line   6)
+* Internationalization:                  Gtk Module.          (line  10)
+* Introduction:                          Introduction.        (line   6)
+* Known bugs:                            Known Bugs.          (line   6)
+* Line segment:                          Gdk Module.          (line 142)
+* Lists:                                 General Conventions. (line  31)
+* Locale <1>:                            Gtk Module.          (line  10)
+* Locale:                                Gdk Module.          (line 283)
+* Mailing list:                          Introduction.        (line  18)
+* Main loop:                             Obsolete Features.   (line  18)
+* metaspline.scm:                        Example Programs.    (line  36)
+* Multiple return values <1>:            Tips and Techniques. (line  37)
+* Multiple return values:                General Conventions. (line  58)
+* NULL:                                  General Conventions. (line  17)
+* Objects:                               General Conventions. (line  94)
+* Obsolete features:                     Obsolete Features.   (line   6)
+* Options <1>:                           Gtk Module.          (line  10)
+* Options:                               Gdk Module.          (line  10)
+* Pixels:                                Gdk Module.          (line 167)
+* Points:                                Gdk Module.          (line 133)
+* Predicates:                            Gdk Module.          (line  23)
+* primitive-fork:                        Tips and Techniques. (line  13)
+* Rectangle:                             Gdk Module.          (line 137)
+* Reporting bugs:                        Reporting Bugs.      (line   6)
+* Response:                              Gtk Module.          (line  49)
+* run-glade.scm:                         Example Programs.    (line  43)
+* Segment:                               Gdk Module.          (line 142)
+* Self tests:                            Installing.          (line  17)
+* Signal handlers <1>:                   Gtk Extras.          (line   9)
+* Signal handlers:                       Gtk Module.          (line 239)
+* Signals:                               Gtk Module.          (line  91)
+* simple.glade:                          Example Programs.    (line  43)
+* simple.scm:                            Example Programs.    (line  40)
+* Splines:                               Example Programs.    (line  37)
+* Standalone main:                       Obsolete Features.   (line  10)
+* Style:                                 Gtk Module.          (line  66)
+* Test programs:                         Example Programs.    (line  50)
+* Threading:                             General Conventions. (line 121)
+* Threads:                               Gtk Extras.          (line  95)
+* Throw:                                 Gtk Module.          (line 174)
+* tictactoe.scm:                         Example Programs.    (line  58)
+* Tips and techniques:                   Tips and Techniques. (line   6)
+* Trampoline:                            Gtk Extras.          (line   9)
+* Type predicates:                       General Conventions. (line  99)
+* Types:                                 General Conventions. (line  78)
+* Web page:                              Introduction.        (line  18)
+* Wide characters:                       Gdk Module.          (line 147)
+* Window:                                Gdk Module.          (line 155)
+* X display:                             Gdk Module.          (line  10)
+* XML:                                   Glade Module.        (line  13)
+
+
+File: guile-gtk.info,  Node: Function and Type Index,  Prev: Concept Index,  Up: Top
+
+Function and Type Index
+***********************
+
+ [index ]
+* Menu:
+
+* (gtk threads):                         Gtk Extras.          (line  95)
+* (gtk-2.0 gdk):                         Gdk Module.          (line   8)
+* (gtk-2.0 gdk-gl):                      Gtk GL Module.       (line   8)
+* (gtk-2.0 gdk-pixbuf):                  GdkPixbuf Module.    (line   8)
+* (gtk-2.0 glade):                       Glade Module.        (line   8)
+* (gtk-2.0 gtk):                         Gtk Module.          (line   8)
+* (gtk-2.0 gtk-gl-area):                 Gtk GL Module.       (line   8)
+* gboolean:                              General Conventions. (line  27)
+* gdk-bitmap-create-from-data:           Gdk Module.          (line 176)
+* gdk-color-black:                       Gdk Module.          (line 184)
+* gdk-color-blue:                        Gdk Module.          (line  55)
+* gdk-color-green:                       Gdk Module.          (line  56)
+* gdk-color-intern:                      Gdk Extras.          (line   9)
+* gdk-color-new:                         Gdk Extras.          (line  18)
+* gdk-color-pixel:                       Gdk Module.          (line  57)
+* gdk-color-red:                         Gdk Module.          (line  54)
+* gdk-color-set-blue:                    Gdk Module.          (line  59)
+* gdk-color-set-green:                   Gdk Module.          (line  60)
+* gdk-color-set-pixel:                   Gdk Module.          (line  61)
+* gdk-color-set-red:                     Gdk Module.          (line  58)
+* gdk-color-white:                       Gdk Module.          (line 185)
+* gdk-colormap-alloc-colors:             Gdk Module.          (line 191)
+* gdk-drag-context-action:               Gdk Module.          (line  66)
+* gdk-drag-context-actions:              Gdk Module.          (line  67)
+* gdk-drag-context-dest-window:          Gdk Module.          (line  68)
+* gdk-drag-context-is-source:            Gdk Module.          (line  69)
+* gdk-drag-context-source-window:        Gdk Module.          (line  70)
+* gdk-drag-context-start-time:           Gdk Module.          (line  71)
+* gdk-drag-context-suggested-action:     Gdk Module.          (line  72)
+* gdk-drag-context-targets:              Gdk Module.          (line  73)
+* gdk-event-area:                        Gdk Module.          (line  80)
+* gdk-event-atom:                        Gdk Module.          (line  81)
+* gdk-event-button:                      Gdk Module.          (line  82)
+* gdk-event-configure-height:            Gdk Module.          (line 112)
+* gdk-event-configure-width:             Gdk Module.          (line 111)
+* gdk-event-configure-x:                 Gdk Module.          (line 109)
+* gdk-event-configure-y:                 Gdk Module.          (line 110)
+* gdk-event-count:                       Gdk Module.          (line  83)
+* gdk-event-crossing-mode:               Gdk Module.          (line  84)
+* gdk-event-drag-context:                Gdk Module.          (line  85)
+* gdk-event-focus:                       Gdk Module.          (line  86)
+* gdk-event-in:                          Gdk Module.          (line  87)
+* gdk-event-is-hint:                     Gdk Module.          (line  88)
+* gdk-event-keyval:                      Gdk Module.          (line  89)
+* gdk-event-message:                     Gdk Module.          (line 122)
+* gdk-event-message-type:                Gdk Module.          (line 123)
+* gdk-event-notify-detail:               Gdk Module.          (line  90)
+* gdk-event-property:                    Gdk Module.          (line  92)
+* gdk-event-requestor:                   Gdk Module.          (line  93)
+* gdk-event-selection:                   Gdk Module.          (line  94)
+* gdk-event-send-event:                  Gdk Module.          (line  91)
+* gdk-event-source:                      Gdk Module.          (line  95)
+* gdk-event-state:                       Gdk Module.          (line 116)
+* gdk-event-string:                      Gdk Module.          (line  96)
+* gdk-event-subwindow:                   Gdk Module.          (line  97)
+* gdk-event-target:                      Gdk Module.          (line  98)
+* gdk-event-time:                        Gdk Module.          (line  99)
+* gdk-event-type:                        Gdk Module.          (line  79)
+* gdk-event-visibility-state:            Gdk Module.          (line 119)
+* gdk-event-window:                      Gdk Module.          (line 100)
+* gdk-event-x:                           Gdk Module.          (line 104)
+* gdk-event-x-root:                      Gdk Module.          (line 101)
+* gdk-event-y:                           Gdk Module.          (line 105)
+* gdk-event-y-root:                      Gdk Module.          (line 102)
+* gdk-font-intern:                       Gdk Extras.          (line  21)
+* gdk-gc-get-values:                     Gdk Module.          (line 209)
+* gdk-gc-new-with-values:                Gdk Module.          (line 224)
+* gdk-image-new-bitmap:                  Gdk Module.          (line 235)
+* gdk-init:                              Gdk Module.          (line 329)
+* gdk-init-check:                        Gdk Module.          (line 330)
+* gdk-mbstowc:                           Gdk Module.          (line 257)
+* gdk-pixbuf-render-threshold-alpha:     GdkPixbuf Module.    (line  18)
+* gdk-pixbuf-render-to-drawable:         GdkPixbuf Module.    (line  20)
+* gdk-pixbuf-render-to-drawable-alpha:   GdkPixbuf Module.    (line  22)
+* gdk-pixmap-colormap-create-from-xpm:   Gdk Module.          (line 265)
+* gdk-pixmap-colormap-create-from-xpm-d: Gdk Module.          (line 269)
+* gdk-pixmap-create-from-xpm:            Gdk Module.          (line 263)
+* gdk-pixmap-create-from-xpm-d:          Gdk Module.          (line 267)
+* gdk-pixmap-new:                        Gdk Module.          (line 276)
+* gdk-rectangle-intersect:               Gdk Module.          (line 279)
+* gdk-set-locale:                        Gdk Module.          (line 283)
+* gdk-threads-enter:                     General Conventions. (line 121)
+* gdk-threads-leave:                     General Conventions. (line 121)
+* gdk-window-get-deskrelative-origin:    Gdk Module.          (line 287)
+* gdk-window-get-origin:                 Gdk Module.          (line 288)
+* gdk-window-get-position:               Gdk Module.          (line 289)
+* gdk-window-get-root-origin:            Gdk Module.          (line 290)
+* gdk-window-get-size:                   Gdk Module.          (line 291)
+* gdk-window-get-user-data:              Gdk Module.          (line 334)
+* gdk-window-new:                        Gdk Module.          (line 297)
+* gdk-window-set-geometry-hints:         Gdk Module.          (line 308)
+* gdk-window-set-user-data:              Gdk Module.          (line 335)
+* GdkAtom:                               Gdk Module.          (line  38)
+* GdkBitmap:                             Gdk Module.          (line  42)
+* GdkColor:                              Gdk Module.          (line  47)
+* GdkDragContext:                        Gdk Module.          (line  63)
+* GdkEvent:                              Gdk Module.          (line  75)
+* GdkFont:                               Gdk Module.          (line 128)
+* GdkPoint:                              Gdk Module.          (line 133)
+* GdkRectangle:                          Gdk Module.          (line 137)
+* GdkSegment:                            Gdk Module.          (line 142)
+* GdkWChar:                              Gdk Module.          (line 147)
+* GdkWindow:                             Gdk Module.          (line 155)
+* gint:                                  General Conventions. (line  21)
+* glade-xml-filename:                    Glade Module.        (line  18)
+* glade-xml-new:                         Glade Module.        (line  24)
+* glade-xml-signal-autoconnect-full:     Glade Module.        (line  29)
+* glade-xml-signal-connect-full:         Glade Module.        (line  28)
+* GladeXML:                              Glade Module.        (line  13)
+* GList:                                 General Conventions. (line  31)
+* GObject:                               General Conventions. (line  94)
+* GSList:                                General Conventions. (line  31)
+* gtk-adjustment-lower:                  Gtk Module.          (line  24)
+* gtk-adjustment-page-increment:         Gtk Module.          (line  27)
+* gtk-adjustment-page-size:              Gtk Module.          (line  28)
+* gtk-adjustment-set-lower:              Gtk Module.          (line  30)
+* gtk-adjustment-set-page-increment:     Gtk Module.          (line  33)
+* gtk-adjustment-set-page-size:          Gtk Module.          (line  34)
+* gtk-adjustment-set-step-increment:     Gtk Module.          (line  32)
+* gtk-adjustment-set-upper:              Gtk Module.          (line  31)
+* gtk-adjustment-step-increment:         Gtk Module.          (line  26)
+* gtk-adjustment-upper:                  Gtk Module.          (line  25)
+* gtk-adjustment-value:                  Gtk Module.          (line  23)
+* gtk-box-pack-end:                      Gtk Module.          (line 128)
+* gtk-box-pack-start:                    Gtk Module.          (line 127)
+* gtk-callback-trampoline:               Gtk Extras.          (line   9)
+* gtk-class-new:                         Gtk Extras.          (line  32)
+* gtk-clist-selection:                   Gtk Module.          (line  46)
+* gtk-color-selection-get-color:         Gtk Module.          (line 131)
+* gtk-color-selection-set-color:         Gtk Module.          (line 140)
+* gtk-container-foreach:                 Gtk Module.          (line 263)
+* gtk-exit:                              Gtk Module.          (line 149)
+* gtk-gl-area-make-current-force:        Gtk GL Extras.       (line   9)
+* gtk-idle-add:                          Gtk Module.          (line 152)
+* gtk-idle-add-full:                     Gtk Module.          (line 154)
+* gtk-idle-add-priority:                 Gtk Module.          (line 153)
+* gtk-init:                              Gtk Module.          (line 270)
+* gtk-input-add:                         Gtk Module.          (line 162)
+* gtk-list-append-item:                  Gtk Extras.          (line  62)
+* gtk-list-prepend-item:                 Gtk Extras.          (line  63)
+* gtk-main:                              Gtk Module.          (line 172)
+* gtk-main-iteration:                    Gtk Module.          (line 173)
+* gtk-main-iteration-do:                 Gtk Module.          (line 174)
+* gtk-menu-popup:                        Gtk Module.          (line 189)
+* gtk-object-get:                        Gtk Module.          (line 194)
+* gtk-object-new:                        Gtk Module.          (line 203)
+* gtk-object-set:                        Gtk Module.          (line 204)
+* gtk-pixmap-new:                        Gtk Module.          (line 227)
+* gtk-pixmap-new-from-file:              Gtk Extras.          (line  66)
+* gtk-pixmap-set:                        Gtk Module.          (line 228)
+* gtk-scrolled-window-new:               Gtk Module.          (line 231)
+* gtk-set-locale:                        Gtk Module.          (line 235)
+* gtk-signal-connect:                    Gtk Module.          (line 239)
+* gtk-signal-new-generic:                Gtk Extras.          (line  73)
+* gtk-standalone-main:                   Obsolete Features.   (line  18)
+* gtk-standalone?:                       Obsolete Features.   (line  10)
+* gtk-style-base:                        Gtk Module.          (line  77)
+* gtk-style-base-gc:                     Gtk Module.          (line  88)
+* gtk-style-bg:                          Gtk Module.          (line  72)
+* gtk-style-bg-gc:                       Gtk Module.          (line  83)
+* gtk-style-black:                       Gtk Module.          (line  70)
+* gtk-style-black-gc:                    Gtk Module.          (line  81)
+* gtk-style-dark:                        Gtk Module.          (line  74)
+* gtk-style-dark-gc:                     Gtk Module.          (line  85)
+* gtk-style-fg:                          Gtk Module.          (line  71)
+* gtk-style-fg-gc:                       Gtk Module.          (line  82)
+* gtk-style-light:                       Gtk Module.          (line  73)
+* gtk-style-light-gc:                    Gtk Module.          (line  84)
+* gtk-style-mid:                         Gtk Module.          (line  75)
+* gtk-style-mid-gc:                      Gtk Module.          (line  86)
+* gtk-style-text:                        Gtk Module.          (line  76)
+* gtk-style-text-gc:                     Gtk Module.          (line  87)
+* gtk-style-white:                       Gtk Module.          (line  69)
+* gtk-style-white-gc:                    Gtk Module.          (line  80)
+* gtk-table-attach:                      Gtk Module.          (line 249)
+* gtk-text-insert:                       Gtk Module.          (line 254)
+* gtk-threads-ensure-handler:            Gtk Extras.          (line  98)
+* gtk-threads-handler?:                  Gtk Extras.          (line 112)
+* gtk-widget-new:                        Gtk Module.          (line 205)
+* gtk-widget-set:                        Gtk Module.          (line 206)
+* gtk-widget-size-request:               Gtk Module.          (line 257)
+* GtkAdjustment:                         Gtk Module.          (line  20)
+* GtkCList:                              Gtk Module.          (line  43)
+* GtkObject:                             General Conventions. (line  94)
+* GtkResponseType:                       Gtk Module.          (line  49)
+* GtkStyle:                              Gtk Module.          (line  66)
+* GtkType:                               General Conventions. (line  78)
+* GType:                                 General Conventions. (line  78)
+* with-gl-area:                          Gtk GL Extras.       (line  12)
+* with-render-to-gl-area:                Gtk GL Extras.       (line  13)
+
+
+
+Tag Table:
+Node: Top1043
+Node: Introduction2347
+Node: Installing3664
+Node: Reporting Bugs5565
+Node: General Conventions6656
+Node: Gdk Module11914
+Node: Gdk Extras26602
+Node: Gtk Module27699
+Node: Gtk Extras38715
+Node: GdkPixbuf Module43270
+Node: Glade Module44275
+Node: Gtk GL Module45635
+Node: Gtk GL Extras46233
+Node: Tips and Techniques46942
+Node: Known Bugs49173
+Node: Obsolete Features49735
+Node: Example Programs50827
+Node: Internals52838
+Node: Concept Index58316
+Node: Function and Type Index67233
+
+End Tag Table

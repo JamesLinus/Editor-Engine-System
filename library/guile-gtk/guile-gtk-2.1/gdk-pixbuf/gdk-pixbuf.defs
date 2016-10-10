@@ -1,0 +1,365 @@
+;;; -*- scheme -*-
+;;;
+;;; gdk-pixbuf.defs - Export gdk-pixbuf libraries to Guile
+;;; 
+;;; Copyright (C) 2000, 2003, 2005, 2006, 2007 Free Software Foundation, Inc.
+;;; 
+;;; This program is free software; you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation; either version 3, or (at your option)
+;;; any later version.
+;;; 
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
+;;; 
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+(import "gtk-2.0.defs")
+(import "gdk-2.0.defs")
+
+;;gdk-pixbuf.h
+
+(define-object GdkPixbuf (GObject))
+
+(define-object GdkPixbufAnimation (GObject))
+
+;; Gone in Gtk 2.0, so don't have to worry about this:
+;;
+;; GdkPixbufFrame is not separately reference counted, it's merely a
+;; component of a GdkPixbufAnimation.  At the scheme level a GdkPixbufFrame
+;; object will need to bump the reference count on its containing
+;; GdkPixbufAnimation.  The boxed type stuff doesn't really allow that
+;; directly, since there's no link within a GdkPixbufFrame back to its
+;; GdkPixbufAnimation.  Might need an extra little structure holding that,
+;; or a new smob or something.
+;;
+;;(define-object GdkPixbufFrame (GdkPixbuf))
+
+(define-enum GdkColorspace
+  (rgb GDK_COLORSPACE_RGB))
+
+(define-enum GdkPixbufAlphaMode
+  (bilevel GDK_PIXBUF_ALPHA_BILEVEL)
+  (full	GDK_PIXBUF_ALPHA_FULL))
+
+(define-enum GdkInterpType
+  (nearest  GDK_INTERP_NEAREST)
+  (tiles GDK_INTERP_TILES)
+  (bilinear GDK_INTERP_BILINEAR)
+  (hyper GDK_INTERP_HYPER))
+
+;; Gone in Gtk 2.0.
+;;
+;; (define-enum GdkPixbufFrameAction
+;;   (retain GDK_PIXBUF_FRAME_RETAIN)
+;;   (dispose GDK_PIXBUF_FRAME_DISPOSE)
+;;   (revert GDK_PIXBUF_FRAME_REVERT))
+
+(define-func gdk_pixbuf_get_colorspace
+  GdkColorspace
+  ((GdkPixbuf	pixbuf)))
+  
+(define-func gdk_pixbuf_get_n_channels
+  int
+  ((GdkPixbuf	pixbuf)))
+  
+(define-func gdk_pixbuf_get_has_alpha
+  bool
+  ((GdkPixbuf	pixbuf)))
+  
+(define-func gdk_pixbuf_get_bits_per_sample
+  int
+  ((GdkPixbuf	pixbuf)))
+  
+(define-func gdk_pixbuf_get_width
+  int
+  ((GdkPixbuf	pixbuf)))
+  
+(define-func gdk_pixbuf_get_height
+  int
+  ((GdkPixbuf	pixbuf)))
+  
+(define-func gdk_pixbuf_get_rowstride
+  int
+  ((GdkPixbuf	pixbuf)))
+  
+
+(define-func gdk_pixbuf_new
+  (GdkPixbuf (copy #f))
+  ((GdkColorspace	colorspace)
+   (bool		has_alpha)
+   (int			bits_per_sampe)
+   (int			width)
+   (int			height)))
+
+(define-func gdk_pixbuf_copy 
+  (GdkPixbuf (copy #f))
+  ((GdkPixbuf pixbuf)))
+
+(define-func gdk_pixbuf_new_from_file 
+  (GdkPixbuf (copy #f))
+  ((string  filename))
+  (gerror #t))
+
+;;(define-func gdk_pixbuf_new_from_data 
+;;  GdkPixbuf
+;;  ((string  data)
+;;   (GdkColorspace colorspace)
+;;   (bool has-alpha)
+;;   (int bits-per-sample)
+;;   (int width)
+;;   (int height)
+;;   (int rowstride)
+;;   (GdkPixbufDestroyNotify destroy-fn)
+;;   (pointer destroy-fn-data)))
+
+(define-func gdk_pixbuf_new_from_xpm_data_interp
+  (GdkPixbuf (copy #f))
+  (((cvec string) data)))
+
+(define-func gdk_pixbuf_add_alpha 
+  (GdkPixbuf (copy #f))
+  ((GdkPixbuf  pixbuf)
+   (bool substitute_color)
+   (int	r) 
+   (int	g)
+   (int	b)))
+
+(define-func gdk_pixbuf_copy_area 
+  none
+  ((GdkPixbuf src_pixbuf)
+   (int src_x)
+   (int src_y)
+   (int width)
+   (int height)
+   (GdkPixbuf dest_pixbuf)
+   (int dest_x)
+   (int dest_y)))
+
+(define-func gdk_pixbuf_render_threshold_alpha 
+  none
+  ((GdkPixbuf pixbuf)
+   (GdkBitmap bitmap)
+   (int src_x)
+   (int src_y)
+   (int dest_x)
+   (int dest_y)
+   (int width)
+   (int height)
+   (int alpha_threshold))
+  (initcode "gdk_rgb_init();"))
+
+(define-func gdk_pixbuf_render_to_drawable 
+  none
+  ((GdkPixbuf  pixbuf)
+   (GdkDrawable  drawable)
+   (GdkGC  gc)
+   (int src_x)
+   (int src_y)
+   (int dest_x)
+   (int dest_y)
+   (int width)
+   (int height)
+   (GdkRgbDither dither)
+   (int x_dither)
+   (int y_dither))
+  (initcode "gdk_rgb_init();"))
+
+(define-func gdk_pixbuf_render_to_drawable_alpha 
+  none
+  ((GdkPixbuf  pixbuf)
+   (GdkDrawable  drawable)
+   (int src_x)
+   (int src_y)
+   (int dest_x)
+   (int dest_y)
+   (int width)
+   (int height)
+   (GdkPixbufAlphaMode alpha_mode)
+   (int alpha_threshold)
+   (GdkRgbDither dither)
+   (int x_dither)
+   (int y_dither))
+  (initcode "gdk_rgb_init();"))
+
+;;(define-func gdk_pixbuf_render_pixmap_and_mask 
+;;  none
+;;  ((GdkPixbuf pixbuf)
+;;   ((cvec GdkPixmap) pixmap_return)
+;;   ((cvec GdkBitmap) mask_return)
+ ;;  (int alpha_threshold))
+;;  (initcode "gdk_rgb_init();"))
+
+(define-func gdk_pixbuf_get_from_drawable 
+  (GdkPixbuf (copy #f))
+  ((GdkPixbuf dest)
+   (GdkDrawable src)
+   (GdkColormap cmap)
+   (int src_x)
+   (int src_y)
+   (int dest_x)
+   (int dest_y)
+   (int width)
+   (int height)))
+
+(define-func gdk_pixbuf_scale           
+  none
+  ((GdkPixbuf  src)
+   (GdkPixbuf dest)
+   (int dest_x)
+   (int dest_y)
+   (int dest_width)
+   (int dest_height)
+   (double offset_x)
+   (double offset_y)
+   (double scale_x)
+   (double scale_y)
+   (GdkInterpType interp_type)))
+
+(define-func gdk_pixbuf_composite       
+  none
+  ((GdkPixbuf  src)
+   (GdkPixbuf dest)
+   (int dest_x)
+   (int dest_y)
+   (int dest_width)
+   (int dest_height)
+   (double offset_x)
+   (double offset_y)
+   (double scale_x)
+   (double scale_y)
+   (GdkInterpType interp_type)
+   (int overall_alpha)))
+
+(define-func gdk_pixbuf_composite_color 
+  none
+  ((GdkPixbuf src)
+   (GdkPixbuf dest)
+   (int dest_x)
+   (int dest_y)
+   (int dest_width)
+   (int dest_height)
+   (double offset_x)
+   (double offset_y)
+   (double scale_x)
+   (double scale_y)
+   (GdkInterpType interp_type)
+   (int overall_alpha)
+   (int check_x)
+   (int check_y)
+   (int check_size)
+   (uint color1)
+   (uint color2)))
+
+(define-func gdk_pixbuf_scale_simple           
+  (GdkPixbuf (copy #f))
+  ((GdkPixbuf src)
+   (int dest_width)
+   (int dest_height)
+   (GdkInterpType interp_type)))
+
+(define-func gdk_pixbuf_composite_color_simple 
+  (GdkPixbuf (copy #f))
+  ((GdkPixbuf  src)
+   (int dest_width)
+   (int dest_height)
+   (GdkInterpType interp_type)
+   (int overall_alpha)
+   (int check_size)
+   (uint color1)
+   (uint color2)))
+
+
+(define-func gdk_pixbuf_animation_new_from_file   
+  (GdkPixbufAnimation (copy #f))
+  ((string filename))
+  (gerror #t))
+
+(define-func gdk_pixbuf_animation_get_width       
+  int
+  ((GdkPixbufAnimation  animation)))
+
+(define-func gdk_pixbuf_animation_get_height      
+  int
+  ((GdkPixbufAnimation animation)))
+
+;;(define-func gdk_pixbuf_animation_get_frames      
+;;  list
+;;  ((GdkPixbufAnimation animation)))
+
+;; Gone in Gtk 2.0.
+;;
+;; (define-func gdk_pixbuf_animation_get_num_frames  
+;;   int
+;;   ((GdkPixbufAnimation animation)))
+
+; (define-func gdk_pixbuf_frame_get_pixbuf     
+;   GdkPixbuf
+;   ((GdkPixbufFrame frame)))
+; 
+; (define-func gdk_pixbuf_frame_get_x_offset   
+;   int
+;   ((GdkPixbufFrame frame)))
+; 
+; (define-func gdk_pixbuf_frame_get_y_offset   
+;   int
+;   ((GdkPixbufFrame frame)))
+; 
+; (define-func gdk_pixbuf_frame_get_delay_time 
+;   int
+;   ((GdkPixbufFrame frame)))
+; 
+; (define-func gdk_pixbuf_frame_get_action     
+;   GdkPixbufFrameAction
+;  ((GdkPixbufFrame frame)))
+
+;; gdk-pixbuf-loader.h
+
+(define-object GdkPixbufLoader (GObject))
+
+(define-func gdk_pixbuf_loader_new           
+  GdkPixbufLoader
+  ())
+
+(define-func gdk_pixbuf_loader_write_interp
+  bool
+  ((GdkPixbufLoader loader)
+   (SCM buf)     ;; string
+   (SCM count))  ;; integer
+  (gerror #t))
+
+(define-func gdk_pixbuf_loader_get_pixbuf    
+  GdkPixbuf
+  ((GdkPixbufLoader loader)))
+
+(define-func gdk_pixbuf_loader_get_animation 
+  GdkPixbufAnimation
+  ((GdkPixbufLoader loader)))
+
+(define-func gdk_pixbuf_loader_close         
+  bool
+  ((GdkPixbufLoader loader))
+  (gerror #t))
+
+
+;; GdkCursor
+
+(define-func gdk_cursor_new_from_pixbuf
+  (GdkCursor (copy #f))
+  ((GdkDisplay display)
+   (GdkPixbuf pixbuf)
+   (int x)
+   (int y)))
+
+;; gnome-canvas-pixbuf.h
+
+(options 
+ (includes "#include <gdk-pixbuf/gdk-pixbuf.h>"
+           "#include <gdk-pixbuf/gdk-pixbuf-loader.h>"
+	   "#include \"gdk-pixbuf-support.h\"")
+ (init-func "sgtk_init_gtk_gdk_pixbuf_glue"))
+
+

@@ -1,0 +1,75 @@
+.\" build-guile-gtk man page.   -*- mode:nroff -*-
+.\"
+.\" Copyright (C) 2006 Free Software Foundation, Inc.
+.\"
+.\" This file is part of Guile Gtk.
+.\"
+.\" Guile Gtk is free software; you can redistribute it and/or modify it
+.\" under the terms of the GNU General Public License as published by the
+.\" Free Software Foundation; either version 3, or (at your option) any
+.\" later version.
+.\"
+.\" Guile Gtk is distributed in the hope that it will be useful, but WITHOUT
+.\" ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+.\" FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+.\" for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program.  If not, see <http://www.gnu.org/licenses/>.
+.\"
+.TH build-guile-gtk 1
+.SH NAME
+build-guile-gtk \- produce Guile interface code for Gtk defs
+.SH SYNOPSIS
+.B build-guile-gtk
+[-I dir] cmd [defsfile]
+.br
+.B build-guile-gtk-2.0
+[-I dir] cmd [defsfile]
+.SH DESCRIPTION
+build-guile-gtk takes a definitions file of Gtk objects and functions, and
+produces C language glue code for Guile to call those functions and
+manipulate those objects.
+.PP
+.I -I dir
+is a directory to search when looking for defs files imported by a given
+.IR defsfile .
+Multiple
+.I -I
+options may be given to search multiple directories.
+.PP
+.I cmd
+is one of the following directives,
+.TP
+glue
+Print C glue code to the standard output, derived from the given
+.IR defsfile .
+For example
+.IP
+build-guile-gtk glue something.defs >something-glue.c
+.TP
+cflags
+Print a set of compiler flags needed for compiling the glue.
+.TP
+libs
+Print a set of compiler flags which are libraries needed for the glue.
+This includes the Guile libraries.
+.TP
+liblibs
+Print a set of compiler flags which are libraries needed for the glue,
+excluding the Guile libraries.
+.SH "SEE ALSO"
+.IR guile (1)
+.SH LICENCE
+Guile Gtk is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation; either version 3, or (at your option) any later
+version.
+.PP
+Guile Gtk is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+details.
+.PP
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see http://www.gnu.org/licenses/.

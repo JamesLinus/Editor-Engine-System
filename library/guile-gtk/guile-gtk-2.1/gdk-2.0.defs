@@ -1,0 +1,2304 @@
+;; -*- scheme -*-
+
+;; Copyright (C) 2003, 2005, 2006, 2007 Free Software Foundation, Inc.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 3 of
+;; the License, or (at your option) any later version.
+;; 
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;; 
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+;;; Unimplemented Features:
+;;
+;; void gdk_add_client_message_filter (GdkAtom mess_type, GdkFilterFunc func,
+;;                                     gpointer data);
+;;     This needs a GdkXEvent type and field accessors, and GdkEvent field
+;;     setters before it can do much useful.
+;;
+;; void gdk_exit(gint error_code);
+;;     Since currently Gtk is initialized when (gdk gdk) loads, applications
+;;     should call gtk-exit (which in gtk 1.2 does nothing but call gdk_exit
+;;     in fact).  gdk-exit could be introduced if/when Gdk can be used
+;;     alone.
+;;
+;; void gdk_event_handler_set (GdkEventFunc func, gpointer data,
+;;                             GDestroyNotify notify);
+;;     This is used by Gtk to implement gtk_main etc and so won't be useful
+;;     to normal applications, not unless/until Gdk can be used alone.
+;;
+;; void gdk_init(gint *argc,char ***argv);
+;;     This is done automatically when the gdk module is loaded, so really
+;;     doesn't need to be available separately.  And manipulating the global
+;;     `program-arguments' should be enough for normal uses.
+;;
+;; gboolean gdk_init_check(gint *argc,char ***argv);
+;;     It might be nice to have this available, so an application can do
+;;     something if the X display is unreachable or whatever.  A way to
+;;     catch an error from a normal (gtk gdk) module load would be another
+;;     possibility.
+;;
+;; void gdk_window_add_filter (GdkWindow *window, GdkFilterFunc function,
+;;                             gpointer data);
+;; void gdk_window_remove_filter (GdkWindow *window, GdkFilterFunc function,
+;;                                gpointer data);
+;;     These need a GdkXEvent type and field accessors, and GdkEvent field
+;;     setters before they can do much useful.
+;;
+;;     The aim would be to garbage collect the scheme filter function when
+;;     the window is destroyed, as happens for Gtk level signal handlers.
+;;     Unfortunately gtk 1.2 doesn't seem to offer any way to know when
+;;     that's happened for a window (gtk 2 does, since GdkWindow is a
+;;     GObject there).  Maybe initially it'd be good enough to keep all
+;;     added filters alive until removal.  This would be wanted for
+;;     window==NULL for a start, and applications could be asked to remove a
+;;     filter before the window is destroyed.  (Failing to do so would
+;;     merely mean filter procs kept alive but never called.)
+;;
+;; void gdk_window_get_user_data (GdkWindow *window, gpointer *data);
+;; void gdk_window_set_user_data (GdkWindow *window, gpointer data);
+;;     Gtk uses this user data to point to the GtkWidget owning the window,
+;;     ready for event dispatch, and it doesn't seem to have much error
+;;     checking, so anything else in the user data is likely to cause
+;;     problems.  On that basis these functions have no use unless/until Gdk
+;;     can be used alone.  (Crib note: This description was for Gtk 1.2,
+;;     it's still true in Gtk 2.0.)
+;;
+;; GdkPropertyState gdk_event_property_state (GdkEvent *event);
+;;     Field accessor for property.state, as per gdk_event_visibility_state.
+;;     
+;;
+;; void gdk_set_sm_client_id(const gchar *sm_client_id);
+;; gint gdk_get_use_xshm(void);
+;; void gdk_set_use_xshm(gint use_xshm);
+;;
+
+
+;;; Gdk enums
+
+;; Note that sgtk_timestamp cannot be used for a timestamp return value,
+;; since of course an actual timestamp value is an arbitrary number, not
+;; merely the GDK_CURRENT_TIME value here.
+;;
+(define-enum sgtk_timestamp
+  ((gettypefuncname "NULL")) ;; no GType provided by Gdk
+
+  (current-time GDK_CURRENT_TIME))
+
+(define-enum GdkWindowType
+  (root GDK_WINDOW_ROOT)
+  (toplevel GDK_WINDOW_TOPLEVEL)
+  (child GDK_WINDOW_CHILD)
+  (dialog GDK_WINDOW_DIALOG)
+  (temp GDK_WINDOW_TEMP)
+  (foreign GDK_WINDOW_FOREIGN)
+  ;; Gone in Gtk 2.0.
+  ;; (pixmap GDK_WINDOW_PIXMAP)
+  )
+
+(define-enum GdkWindowClass
+  (input-output GDK_INPUT_OUTPUT)
+  (input-only GDK_INPUT_ONLY))
+
+(define-enum GdkImageType
+  (normal GDK_IMAGE_NORMAL)
+  (shared GDK_IMAGE_SHARED)
+  (fastest GDK_IMAGE_FASTEST))
+
+(define-enum GdkVisualType
+  (static-gray GDK_VISUAL_STATIC_GRAY)
+  (grayscale GDK_VISUAL_GRAYSCALE)
+  (static-color GDK_VISUAL_STATIC_COLOR)
+  (pseudo-color GDK_VISUAL_PSEUDO_COLOR)
+  (true-color GDK_VISUAL_TRUE_COLOR)
+  (direct-color GDK_VISUAL_DIRECT_COLOR))
+
+(define-enum GdkFontType
+  (font GDK_FONT_FONT)
+  (fontset GDK_FONT_FONTSET))
+
+(define-flags GdkWindowAttributesType
+  (title GDK_WA_TITLE)
+  (x GDK_WA_X)
+  (y GDK_WA_Y)
+  (cursor GDK_WA_CURSOR)
+  (colormap GDK_WA_COLORMAP)
+  (visual GDK_WA_VISUAL))
+
+(define-flags GdkWindowHints
+  (pos GDK_HINT_POS)
+  (min-size GDK_HINT_MIN_SIZE)
+  (max-size GDK_HINT_MAX_SIZE)
+  (base-size GDK_HINT_BASE_SIZE)
+  (aspect GDK_HINT_ASPECT)
+  (resize-inc GDK_HINT_RESIZE_INC)
+  (win-gravity GDK_HINT_WIN_GRAVITY)
+  (user-pos GDK_HINT_USER_POS)
+  (user-size GDK_HINT_USER_SIZE))
+
+(define-enum GdkFunction
+  (copy GDK_COPY)
+  (invert GDK_INVERT)
+  (xor GDK_XOR)
+  (clear GDK_CLEAR)
+  (and GDK_AND)
+  (and-reverse GDK_AND_REVERSE)
+  (and-invert GDK_AND_INVERT)
+  (noop GDK_NOOP)
+  (or GDK_OR)
+  (equiv GDK_EQUIV)
+  (or-reverse GDK_OR_REVERSE)
+  (copy-invert GDK_COPY_INVERT)
+  (or-invert GDK_OR_INVERT)
+  (nand GDK_NAND)
+  (nor GDK_NOR)
+  (set GDK_SET))
+
+(define-enum GdkFill
+  (solid GDK_SOLID)
+  (tiled GDK_TILED)
+  (stippled GDK_STIPPLED)
+  (opaque-stippled GDK_OPAQUE_STIPPLED))
+
+(define-enum GdkLineStyle
+  (solid GDK_LINE_SOLID)
+  (on-off-dash GDK_LINE_ON_OFF_DASH)
+  (double-dash GDK_LINE_DOUBLE_DASH))
+
+(define-enum GdkCapStyle
+  (not-last GDK_CAP_NOT_LAST)
+  (butt GDK_CAP_BUTT)
+  (round GDK_CAP_ROUND)
+  (projecting GDK_CAP_PROJECTING))
+
+(define-enum GdkJoinStyle
+  (miter GDK_JOIN_MITER)
+  (round GDK_JOIN_ROUND)
+  (bevel GDK_JOIN_BEVEL))
+
+(define-enum GdkCursorType
+  (x-cursor GDK_X_CURSOR)
+  (arrow GDK_ARROW)
+  (based-arrow-down GDK_BASED_ARROW_DOWN)
+  (based-arrow-up GDK_BASED_ARROW_UP)
+  (boat GDK_BOAT)
+  (bogosity GDK_BOGOSITY)
+  (bottom-left-corner GDK_BOTTOM_LEFT_CORNER)
+  (bottom-right-corner GDK_BOTTOM_RIGHT_CORNER)
+  (bottom-side GDK_BOTTOM_SIDE)
+  (bottom-tee GDK_BOTTOM_TEE)
+  (box-spiral GDK_BOX_SPIRAL)
+  (center-ptr GDK_CENTER_PTR)
+  (circle GDK_CIRCLE)
+  (clock GDK_CLOCK)
+  (coffee-mug GDK_COFFEE_MUG)
+  (cross GDK_CROSS)
+  (cross-reverse GDK_CROSS_REVERSE)
+  (crosshair GDK_CROSSHAIR)
+  (diamond-cross GDK_DIAMOND_CROSS)
+  (dot GDK_DOT)
+  (dotbox GDK_DOTBOX)
+  (double-arrow GDK_DOUBLE_ARROW)
+  (draft-large GDK_DRAFT_LARGE)
+  (draft-small GDK_DRAFT_SMALL)
+  (draped-box GDK_DRAPED_BOX)
+  (exchange GDK_EXCHANGE)
+  (fleur GDK_FLEUR)
+  (gobbler GDK_GOBBLER)
+  (gumby GDK_GUMBY)
+  (hand1 GDK_HAND1)
+  (hand2 GDK_HAND2)
+  (heart GDK_HEART)
+  (icon GDK_ICON)
+  (iron-cross GDK_IRON_CROSS)
+  (left-ptr GDK_LEFT_PTR)
+  (left-side GDK_LEFT_SIDE)
+  (left-tee GDK_LEFT_TEE)
+  (leftbutton GDK_LEFTBUTTON)
+  (ll-angle GDK_LL_ANGLE)
+  (lr-angle GDK_LR_ANGLE)
+  (man GDK_MAN)
+  (middlebutton GDK_MIDDLEBUTTON)
+  (mouse GDK_MOUSE)
+  (pencil GDK_PENCIL)
+  (pirate GDK_PIRATE)
+  (plus GDK_PLUS)
+  (question-arrow GDK_QUESTION_ARROW)
+  (right-ptr GDK_RIGHT_PTR)
+  (right-side GDK_RIGHT_SIDE)
+  (right-tee GDK_RIGHT_TEE)
+  (rightbutton GDK_RIGHTBUTTON)
+  (rtl-logo GDK_RTL_LOGO)
+  (sailboat GDK_SAILBOAT)
+  (sb-down-arrow GDK_SB_DOWN_ARROW)
+  (sb-h-double-arrow GDK_SB_H_DOUBLE_ARROW)
+  (sb-left-arrow GDK_SB_LEFT_ARROW)
+  (sb-right-arrow GDK_SB_RIGHT_ARROW)
+  (sb-up-arrow GDK_SB_UP_ARROW)
+  (sb-v-double-arrow GDK_SB_V_DOUBLE_ARROW)
+  (shuttle GDK_SHUTTLE)
+  (sizing GDK_SIZING)
+  (spider GDK_SPIDER)
+  (spraycan GDK_SPRAYCAN)
+  (star GDK_STAR)
+  (target GDK_TARGET)
+  (tcross GDK_TCROSS)
+  (top-left-arrow GDK_TOP_LEFT_ARROW)
+  (top-left-corner GDK_TOP_LEFT_CORNER)
+  (top-right-corner GDK_TOP_RIGHT_CORNER)
+  (top-side GDK_TOP_SIDE)
+  (top-tee GDK_TOP_TEE)
+  (trek GDK_TREK)
+  (ul-angle GDK_UL_ANGLE)
+  (umbrella GDK_UMBRELLA)
+  (ur-angle GDK_UR_ANGLE)
+  (watch GDK_WATCH)
+  (xterm GDK_XTERM))
+
+(define-enum GdkEventType
+  (nothing GDK_NOTHING)
+  (delete GDK_DELETE)
+  (destroy GDK_DESTROY)
+  (expose GDK_EXPOSE)
+  (motion-notify GDK_MOTION_NOTIFY)
+  (button-press GDK_BUTTON_PRESS)
+  (2button-press GDK_2BUTTON_PRESS)
+  (3button-press GDK_3BUTTON_PRESS)
+  (button-release GDK_BUTTON_RELEASE)
+  (key-press GDK_KEY_PRESS)
+  (key-release GDK_KEY_RELEASE)
+  (enter-notify GDK_ENTER_NOTIFY)
+  (leave-notify GDK_LEAVE_NOTIFY)
+  (focus-change GDK_FOCUS_CHANGE)
+  (configure GDK_CONFIGURE)
+  (map GDK_MAP)
+  (unmap GDK_UNMAP)
+  (property-notify GDK_PROPERTY_NOTIFY)
+  (selection-clear GDK_SELECTION_CLEAR)
+  (selection-request GDK_SELECTION_REQUEST)
+  (selection-notify GDK_SELECTION_NOTIFY)
+  (proximity-in GDK_PROXIMITY_IN)
+  (proximity-out GDK_PROXIMITY_OUT)
+  (drag-enter GDK_DRAG_ENTER)
+  (drag-leave GDK_DRAG_LEAVE)
+  (drag-motion GDK_DRAG_MOTION)
+  (drag-status GDK_DRAG_STATUS)
+  (drop-start GDK_DROP_START)
+  (drop-finished GDK_DROP_FINISHED)
+  (client-event GDK_CLIENT_EVENT)
+  (visibility-notify GDK_VISIBILITY_NOTIFY)
+  (no-expose GDK_NO_EXPOSE))
+
+(define-flags GdkEventMask
+  (exposure-mask GDK_EXPOSURE_MASK)
+  (pointer-motion-mask GDK_POINTER_MOTION_MASK)
+  (pointer-motion-hint-mask GDK_POINTER_MOTION_HINT_MASK)
+  (button-motion-mask GDK_BUTTON_MOTION_MASK)
+  (button1-motion-mask GDK_BUTTON1_MOTION_MASK)
+  (button2-motion-mask GDK_BUTTON2_MOTION_MASK)
+  (button3-motion-mask GDK_BUTTON3_MOTION_MASK)
+  (button-press-mask GDK_BUTTON_PRESS_MASK)
+  (button-release-mask GDK_BUTTON_RELEASE_MASK)
+  (key-press-mask GDK_KEY_PRESS_MASK)
+  (key-release-mask GDK_KEY_RELEASE_MASK)
+  (enter-notify-mask GDK_ENTER_NOTIFY_MASK)
+  (leave-notify-mask GDK_LEAVE_NOTIFY_MASK)
+  (focus-change-mask GDK_FOCUS_CHANGE_MASK)
+  (structure-mask GDK_STRUCTURE_MASK)
+  (property-change-mask GDK_PROPERTY_CHANGE_MASK)
+  (visibility-notify-mask GDK_VISIBILITY_NOTIFY_MASK)
+  (proximity-in-mask GDK_PROXIMITY_IN_MASK)     
+  (proximity-out-mask GDK_PROXIMITY_OUT_MASK)
+  (substructure-mask GDK_SUBSTRUCTURE_MASK)
+  (all-events-mask GDK_ALL_EVENTS_MASK))
+
+(define-enum GdkFilterReturn
+  (continue GDK_FILTER_CONTINUE)
+  (translate GDK_FILTER_TRANSLATE)
+  (remove GDK_FILTER_REMOVE))
+
+(define-enum GdkCrossingMode
+  (normal GDK_CROSSING_NORMAL)
+  (grab GDK_CROSSING_GRAB)
+  (ungrab GDK_CROSSING_UNGRAB))
+
+(define-enum GdkNotifyType
+  (ancestor GDK_NOTIFY_ANCESTOR)
+  (virtual GDK_NOTIFY_VIRTUAL)
+  (inferior GDK_NOTIFY_INFERIOR)
+  (nonlinear GDK_NOTIFY_NONLINEAR)
+  (nonlinear-virtual GDK_NOTIFY_NONLINEAR_VIRTUAL)
+  (unknown GDK_NOTIFY_UNKNOWN))
+
+(define-flags GdkModifierType
+  (shift-mask GDK_SHIFT_MASK)
+  (lock-mask GDK_LOCK_MASK)
+  (control-mask GDK_CONTROL_MASK)
+  (mod1-mask GDK_MOD1_MASK)
+  (mod2-mask GDK_MOD2_MASK)
+  (mod3-mask GDK_MOD3_MASK)
+  (mod4-mask GDK_MOD4_MASK)
+  (mod5-mask GDK_MOD5_MASK)
+  (button1-mask GDK_BUTTON1_MASK)
+  (button2-mask GDK_BUTTON2_MASK)
+  (button3-mask GDK_BUTTON3_MASK)
+  (button4-mask GDK_BUTTON4_MASK)
+  (button5-mask GDK_BUTTON5_MASK))
+
+(define-enum GdkSubwindowMode
+  (clip-by-children GDK_CLIP_BY_CHILDREN)
+  (include-inferiors GDK_INCLUDE_INFERIORS))
+
+(define-flags GdkInputCondition
+  (read GDK_INPUT_READ)
+  (write GDK_INPUT_WRITE)
+  (exception GDK_INPUT_EXCEPTION))
+
+(define-enum GdkStatus
+  (ok GDK_OK)
+  (error GDK_ERROR)
+  (error-param GDK_ERROR_PARAM)
+  (error-file GDK_ERROR_FILE)
+  (error-mem GDK_ERROR_MEM))
+
+(define-enum GdkByteOrder
+  (lsb-first GDK_LSB_FIRST)
+  (msb-first GDK_MSB_FIRST))
+
+(define-enum GdkSelection
+  ((gettypefuncname "NULL")) ;; no GType provided by Gdk
+
+  (primary GDK_SELECTION_PRIMARY)
+  (secondary GDK_SELECTION_SECONDARY))
+
+(define-enum GdkSelectionType
+  ((gettypefuncname "NULL")) ;; no GType provided by Gdk
+
+  (atom GDK_SELECTION_TYPE_ATOM)
+  (bitmap GDK_SELECTION_TYPE_BITMAP)
+  (colormap GDK_SELECTION_TYPE_COLORMAP)
+  (drawable GDK_SELECTION_TYPE_DRAWABLE)
+  (integer GDK_SELECTION_TYPE_INTEGER)
+  (pixmap GDK_SELECTION_TYPE_PIXMAP)
+  (window GDK_SELECTION_TYPE_WINDOW)
+  (string GDK_SELECTION_TYPE_STRING))
+
+(define-enum GdkTarget
+  ((gettypefuncname "NULL")) ;; no GType provided by Gdk
+
+  (bitmap GDK_TARGET_BITMAP)
+  (colormap GDK_TARGET_COLORMAP)
+  (drawable GDK_TARGET_DRAWABLE)
+  (pixmap GDK_TARGET_PIXMAP)
+  (string GDK_TARGET_STRING))
+
+(define-enum GdkPropertyState
+  (new-value GDK_PROPERTY_NEW_VALUE)
+  (delete GDK_PROPERTY_DELETE))
+
+(define-enum GdkPropMode
+  (replace GDK_PROP_MODE_REPLACE)
+  (prepend GDK_PROP_MODE_PREPEND)
+  (append GDK_PROP_MODE_APPEND))
+
+(define-enum GdkOverlapType
+  (in GDK_OVERLAP_RECTANGLE_IN)
+  (out GDK_OVERLAP_RECTANGLE_OUT)
+  (part GDK_OVERLAP_RECTANGLE_PART))
+
+(define-flags GdkDragAction
+  (default GDK_ACTION_DEFAULT)
+  (copy GDK_ACTION_COPY)   
+  (move GDK_ACTION_MOVE)   
+  (link GDK_ACTION_LINK)   
+  (private GDK_ACTION_PRIVATE)
+  (ask GDK_ACTION_ASK))
+
+(define-enum GdkDragProtocol
+  (motif GDK_DRAG_PROTO_MOTIF)
+  (xdnd GDK_DRAG_PROTO_XDND)
+  (rootwin GDK_DRAG_PROTO_ROOTWIN)
+  (none GDK_DRAG_PROTO_NONE))
+  
+(define-flags GdkWMDecoration
+  ;; `canonicalize' doesn't parse "GdkWMDecoration" the right way
+  ((gettypefuncname "gdk_wm_decoration_get_type")) 
+
+  (all GDK_DECOR_ALL)
+  (border GDK_DECOR_BORDER)
+  (resizeh GDK_DECOR_RESIZEH)
+  (title GDK_DECOR_TITLE)
+  (menu GDK_DECOR_MENU)
+  (minimize GDK_DECOR_MINIMIZE)
+  (maximize GDK_DECOR_MAXIMIZE))
+
+(define-flags GdkWMFunction
+  ;; `canonicalize' doesn't parse "GdkWMFunction" the right way
+  ((gettypefuncname "gdk_wm_function_get_type")) 
+
+  (all GDK_FUNC_ALL)
+  (resize GDK_FUNC_RESIZE)
+  (move GDK_FUNC_MOVE)
+  (minimize GDK_FUNC_MINIMIZE)
+  (maximize GDK_FUNC_MAXIMIZE)
+  (close GDK_FUNC_CLOSE))
+
+(define-enum GdkGravity
+  (north-west GDK_GRAVITY_NORTH_WEST)
+  (north GDK_GRAVITY_NORTH)
+  (north-east GDK_GRAVITY_NORTH_EAST)
+  (west GDK_GRAVITY_WEST)
+  (center GDK_GRAVITY_CENTER)
+  (east GDK_GRAVITY_EAST)
+  (south-west GDK_GRAVITY_SOUTH_WEST)
+  (south GDK_GRAVITY_SOUTH)
+  (south-east GDK_GRAVITY_SOUTH_EAST)
+  (static GDK_GRAVITY_STATIC))
+
+(define-enum GdkVisibilityState
+  (unobscured GDK_VISIBILITY_UNOBSCURED)
+  (partial GDK_VISIBILITY_PARTIAL)
+  (fully-obscured GDK_VISIBILITY_FULLY_OBSCURED))
+
+(define-enum GdkInputSource
+  (mouse GDK_SOURCE_MOUSE)
+  (pen GDK_SOURCE_PEN)
+  (eraser GDK_SOURCE_ERASER)
+  (cursor GDK_SOURCE_CURSOR))
+
+(define-enum GdkRgbDither
+  (none GDK_RGB_DITHER_NONE)
+  (normal GDK_RGB_DITHER_NORMAL)
+  (max GDK_RGB_DITHER_MAX))
+
+(define-enum GdkFillRule
+  (even-odd-rule GDK_EVEN_ODD_RULE)
+  (winding-rule GDK_WINDING_RULE))
+
+;;; Gdk boxed types
+
+(define-object GObject ()
+  (gettypefuncname "sgtk_g_object_get_type"))
+
+(define-object GdkDisplay (GObject))
+
+(define-func gdk_display_get_default
+  GdkDisplay
+  ())
+
+(define-func gdk_display_beep
+  none
+  ((GdkDisplay display)))
+
+(define-func gdk_display_sync
+  none
+  ((GdkDisplay display)))
+
+(define-func gdk_display_flush
+  none
+  ((GdkDisplay display)))
+
+(define-object GdkColormap (GObject))
+
+(define-boxed GdkRgbCmap
+  (free gdk_rgb_cmap_free)
+  (gettypefuncname "NULL"))
+
+(define-object GdkVisual (GObject)
+  (fields (GdkVisualType type)
+	  (int depth)
+	  (GdkByteOrder byte_order)
+	  (int colormap_size)
+	  (int bits_per_rgb)
+	  (uint32 red_mask) (int red_shift) (int red_prec)
+	  (uint32 green_mask) (int green_shift) (int green_prec)
+	  (uint32 blue_mask) (int blue_shift) (int blue_prec)))
+
+(define-boxed GdkFont
+  (copy gdk_font_ref)
+  (free gdk_font_unref)
+  (conversion "sgtk_font_conversion")
+  (fields (GdkFontType type)
+	  (int ascent)
+	  (int descent)))
+
+(define-type-alias GdkWChar uint32)
+
+(define-object GdkDrawable (GObject))
+(define-object GdkWindow (GdkDrawable)
+  (gettypefuncname "gdk_window_object_get_type"))
+(define-object GdkPixmap (GdkDrawable))
+(define-type-alias GdkBitmap GdkDrawable)
+;;(define-object GdkBitmap (GdkDrawable))
+
+;; (define-boxed GdkWindow
+;;   (copy gdk_window_ref)
+;;   (free gdk_window_unref))
+;; (define-boxed GdkPixmap
+;;   (copy gdk_pixmap_ref)
+;;   (free gdk_pixmap_unref))
+;; (define-type-alias GdkBitmap GdkPixmap)
+;; (define-boxed-union GdkDrawable (GdkWindow GdkPixmap))
+
+
+
+;; A GdkEvent passed to a signal handler is freed when the handler returns.
+;; The copy option here ensures the boxed object we create from it has an
+;; unlimited lifespan.
+;;
+;; For reference, the Gdk internal gdk_event_dispatch, which is a
+;; GSourceFunc in the main loop, is where the freeing happens.  An event is
+;; dequeued, the handler function called, and the event freed.
+;;
+(define-boxed GdkEvent
+  (copy gdk_event_copy)
+  (free gdk_event_free))
+
+;; gdk_color_copy returns objects from a special private pool, and
+;; gdk_color_free must be used to free them.  All GdkColor objects within
+;; guile-gtk are allocated by gdk_color_copy, one way or another.
+;; 
+(define-boxed GdkColor
+  (copy gdk_color_copy)
+  (free gdk_color_free)
+  (fields (ulong pixel (setter #t))
+	  (uint red    (setter #t))
+	  (uint green  (setter #t))
+	  (uint blue   (setter #t)))
+  (conversion "sgtk_color_conversion"))
+
+(define-object GdkImage (GObject))
+
+(define-struct GTimer
+  (free g_timer_destroy)
+  (size 0))				; needed -- believe it or not!
+
+(define-boxed GdkRegion
+  (copy gdk_region_copy)
+  (free gdk_region_destroy)
+  (gettypefuncname "NULL"))
+
+(define-object GdkDragContext (GObject)
+  (fields (bool is_source)
+	  (GdkWindow source_window)
+	  (GdkWindow dest_window)
+	  (GdkDragAction actions)
+	  (GdkDragAction suggested_action)
+	  (GdkDragAction action)
+	  (sgtk_timestamp start_time)))
+
+(define-func gdk_drag_get_selection
+  atom
+  ((GdkDragContext context)))
+
+(define-func gdk_drag_abort
+  none
+  ((GdkDragContext context)
+   (sgtk_timestamp time)))
+
+(define-func gdk_drop_reply
+  none
+  ((GdkDragContext context)
+   (bool ok)
+   (sgtk_timestamp time)))
+
+(define-func gdk_drag_context_new
+  (GdkDragContext (copy #f))
+  ())
+
+(define-func gdk_drag_drop
+  none
+  ((GdkDragContext context)
+   (sgtk_timestamp time)))
+
+(define-func gdk_drag_find_window
+  (none (values (dest_window protocol)))
+  ((GdkDragContext context)
+   (GdkWindow drag_window)
+   (int x_root)
+   (int y_root)
+   (GdkWindow dest_window)
+   (GdkDragProtocol protocol)))
+
+(define-func gdk_drag_begin
+  (GdkDragContext (copy #f))
+  ((GdkWindow window)
+   ((list atom) targets)))
+
+(define-func gdk_drag_motion
+  bool
+  ((GdkDragContext context)
+   (GdkWindow dest_window)
+   (GdkDragProtocol protocol)
+   (int x_root)
+   (int y_root)
+   (GdkDragAction suggested_action)
+   (GdkDragAction possible_action)
+   (sgtk_timestamp time)))
+
+(define-func gdk_drop_finish
+  none
+  ((GdkDragContext context)
+   (bool success)
+   (sgtk_timestamp time)))
+
+(define-func gdk_drag_get_protocol
+  (uint32 (values (protocol)))
+  ((uint32 xid)
+   (GdkDragProtocol protocol)))
+
+(define-func gdk_drag_status
+  none
+  ((GdkDragContext context)
+   (GdkDragAction action)
+   (sgtk_timestamp time)))
+
+(define-func gdk_drag_context_targets
+  ((list atom))
+  ((GdkDragContext context)))
+
+;;; GdkCursor
+
+(define-boxed GdkCursor
+  (copy gdk_cursor_ref)
+  (free gdk_cursor_unref))
+
+(define-func gdk_cursor_new
+  (GdkCursor (copy #f))
+  ((GdkCursorType type)))
+
+(define-func gdk_cursor_new_from_pixmap
+  (GdkCursor (copy #f))
+  ((GdkPixmap source)
+   (GdkPixmap mask)
+   (GdkColor fg)
+   (GdkColor bg)
+   (int x)
+   (int y)))
+
+;;; GdkGC
+
+(define-object GdkGC (GObject))
+
+(define-func gdk_gc_new
+  (GdkGC (copy #f))
+  ((GdkDrawable window)))
+
+(define-func gdk_gc_new_with_values_interp
+  (GdkGC (copy #f))
+  ((GdkDrawable drawable)
+   (SCM rest)) ;; keywords and values
+  (rest-arg #t))
+
+(define-func gdk_gc_copy
+  none
+  ((GdkGC dst_gc)
+   (GdkGC src_gc)))
+
+(define-func gdk_gc_get_values_interp
+  ; Returns the fields of the GdkGCValues structure as a list.
+  SCM
+  ((GdkGC gc)))
+
+(define-func gdk_gc_set_foreground
+  none
+  ((GdkGC gc)
+   (GdkColor color)))
+
+(define-func gdk_gc_set_background
+  none
+  ((GdkGC gc)
+   (GdkColor color)))
+
+(define-func gdk_gc_set_font
+  none
+  ((GdkGC gc)
+   (GdkFont font)))
+
+(define-func gdk_gc_set_function
+  none
+  ((GdkGC gc)
+   (GdkFunction function)))
+
+(define-func gdk_gc_set_fill
+  none
+  ((GdkGC gc)
+   (GdkFill fill)))
+
+(define-func gdk_gc_set_tile
+  none
+  ((GdkGC gc)
+   (GdkPixmap tile)))
+
+(define-func gdk_gc_set_stipple
+  none
+  ((GdkGC gc)
+   (GdkPixmap stipple)))
+
+(define-func gdk_gc_set_ts_origin
+  none
+  ((GdkGC gc)
+   (int x)
+   (int y)))
+
+(define-func gdk_gc_set_clip_origin
+  none
+  ((GdkGC gc)
+   (int x)
+   (int y)))
+
+(define-func gdk_gc_set_clip_rectangle
+  none
+  ((GdkGC gc)
+   (rect rect)))
+
+(define-func gdk_gc_set_clip_mask
+  none
+  ((GdkGC gc)
+   (GdkBitmap mask)))
+
+(define-func gdk_gc_set_subwindow
+  none
+  ((GdkGC gc)
+   (GdkSubwindowMode mode)))
+
+(define-func gdk_gc_set_exposures
+  none
+  ((GdkGC gc)
+   (bool exposures)))
+
+(define-func gdk_gc_set_line_attributes
+  none
+  ((GdkGC gc)
+   (int line_width)
+   (GdkLineStyle line_style)
+   (GdkCapStyle cap_style)
+   (GdkJoinStyle join_style)))
+
+(define-func gdk_gc_set_dashes
+  none
+  ((GdkGC gc)
+   (int dash_offset)
+   ((cvecr int8) dash_list)))
+
+(define-func gdk_rectangle_intersect_interp
+  SCM					; rect or #f if no intersection
+  ((rect rect1)
+   (rect rect2)))
+
+(define-func gdk_rectangle_union_interp
+  rect
+  ((rect rect1)
+   (rect rect2)))
+
+(define-func gdk_region_new
+  (GdkRegion (copy #f))
+  ())
+
+(define-func gdk_region_polygon
+  (GdkRegion (copy #f))
+  (((cvecr point) points)
+   (GdkFillRule fill_rule)))
+
+(define-func gdk_region_intersect
+  none
+  ((GdkRegion source1)
+   (GdkRegion source2)))
+
+(define-func gdk_region_union
+  none
+  ((GdkRegion source1)
+   (GdkRegion source2)))
+
+(define-func gdk_region_subtract
+  none
+  ((GdkRegion source1)
+   (GdkRegion source2)))
+
+(define-func gdk_region_xor
+  none
+  ((GdkRegion source1)
+   (GdkRegion source2)))
+
+(define-func gdk_region_union_with_rect
+  none
+  ((GdkRegion region)
+   (rect rect)))
+
+(define-func gdk_region_offset
+  none
+  ((GdkRegion region)
+   (int dx)
+   (int dy)))
+
+(define-func gdk_region_shrink
+  none
+  ((GdkRegion region)
+   (int dx)
+   (int dy)))
+
+(define-func gdk_region_empty
+  bool
+  ((GdkRegion region)))
+
+(define-func gdk_region_equal
+  bool
+  ((GdkRegion region1)
+   (GdkRegion region2)))
+
+(define-func gdk_region_point_in
+  bool
+  ((GdkRegion region)
+   (int x)
+   (int y)))
+
+(define-func gdk_region_rect_in
+  GdkOverlapType
+  ((GdkRegion region)
+   (rect rect)))
+
+(define-func gdk_region_get_clipbox_interp
+  rect
+  ((GdkRegion region)))
+
+(define-func gdk_image_new
+  (GdkImage (copy #f))
+  ((GdkImageType type)
+   (GdkVisual visual)
+   (int width)
+   (int height)))
+
+(define-func gdk_image_new_bitmap_interp
+  (GdkImage (copy #f))
+  ((GdkVisual visual)
+   (raw-data-r data)
+   (int width)
+   (int height)))
+
+(define-func gdk_image_get
+  (GdkImage (copy #f))
+  ((GdkDrawable window)
+   (int x) (int y) (int w) (int h)))
+
+(define-func gdk_image_put_pixel
+  none
+  ((GdkImage image)
+   (int x)
+   (int y)
+   (uint32 pixel)))
+
+(define-func gdk_image_get_pixel
+  uint32
+  ((GdkImage image)
+   (int x)
+   (int y)))
+
+(define-func gdk_draw_point
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   (int x)
+   (int y)))
+
+(define-func gdk_draw_line
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   (int x1)
+   (int y1)
+   (int x2)
+   (int y2)))
+
+(define-func gdk_draw_lines
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   ((cvecr point) points)))
+
+(define-func gdk_draw_segments
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   ((cvecr segment) segs)))
+
+(define-func gdk_draw_rectangle
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   (bool filled)
+   (int x)
+   (int y)
+   (int width)
+   (int height)))
+
+(define-func gdk_draw_polygon
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   (bool filled)
+   ((cvecr point) points)))
+
+(define-func gdk_draw_arc
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   (bool filled)
+   (int x)
+   (int y)
+   (int width)
+   (int height)
+   (int angle1)
+   (int angle2)))
+
+(define-func gdk_draw_string
+  none
+  ((GdkDrawable window)
+   (GdkFont font)
+   (GdkGC gc)
+   (int x)
+   (int y)
+   (string string)))
+
+(define-func gdk_draw_text_interp
+  none
+  ((GdkDrawable window)
+   (GdkFont font)
+   (GdkGC gc)
+   (int x)
+   (int y)
+   (SCM text)))				; string
+
+(define-func gdk_draw_text_wc
+  none
+  ((GdkDrawable window)
+   (GdkFont font)
+   (GdkGC gc)
+   (int x)
+   (int y)
+   ((cvecr GdkWChar) text)))
+
+(define-func gdk_wcstombs_interp
+  string
+  (((cvecr GdkWChar) src)))
+
+(define-func gdk_mbstowcs_interp
+  SCM					; GdkWChar vector or #f
+  ((cstring src)))
+
+(define-func gdk_draw_points
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   ((cvecr point) points)))
+
+(define-func gdk_draw_image
+  none
+  ((GdkDrawable window)
+   (GdkGC gc)
+   (GdkImage image)
+   (int xsrc)
+   (int ysrc)
+   (int xdest)
+   (int ydest)
+   (int width)
+   (int height)))
+
+(define-func gdk_drawable_get_image
+  (GdkImage (copy #f))
+  ((GdkDrawable drawable)
+   (int x)
+   (int y)
+   (int width)
+   (int height)))
+
+;; When image==NULL, a new image is created with a ref count of 1, hence
+;; (copy #f).  When image!=NULL, we already have a proxy for that image so
+;; it doesn't matter what the copy says.
+;;
+(define-func gdk_drawable_copy_to_image
+  (GdkImage (copy #f))
+  ((GdkDrawable drawable)
+   (GdkImage image (null-ok))
+   (int srcx)
+   (int srcy)
+   (int dstx)
+   (int dsty)
+   (int width)
+   (int height)))
+
+(define-func gdk_string_width
+  int
+  ((GdkFont font)
+   (string str)))
+
+(define-func gdk_text_width_interp
+  int
+  ((GdkFont font)
+   (SCM text)))				; string
+
+(define-func gdk_text_width_wc
+  int
+  ((GdkFont font)
+   ((cvecr GdkWChar) text)))
+
+(define-func gdk_char_width
+  int
+  ((GdkFont font)
+   (char character)))
+
+(define-func gdk_char_width_wc
+  int
+  ((GdkFont font)
+   (GdkWChar character)))
+
+(define-func gdk_string_measure
+  int
+  ((GdkFont font)
+   (string string)))
+
+(define-func gdk_text_measure_interp
+  int
+  ((GdkFont font)
+   (SCM text)))				; string
+
+(define-func gdk_char_measure
+  int
+  ((GdkFont font)
+   (char character)))
+
+(define-func gdk_pixmap_new
+  (GdkPixmap (copy #f))
+  ((GdkDrawable window (null-ok))
+   (int width)
+   (int height)
+   (int depth (= "-1"))))
+
+(define-func gdk_bitmap_create_from_data_interp
+  (GdkBitmap (copy #f))
+  ((GdkDrawable window (null-ok))
+   (raw-data-r data)
+   (int width)
+   (int height)))
+
+(define-func gdk_pixmap_create_from_data_interp
+  (GdkPixmap (copy #f))
+  ((GdkDrawable window (null-ok))		; if #f depth is used
+   (raw-data-r data)
+   (int width)
+   (int height)
+   (int depth)				; if window is not #f, depth is ignored
+   (GdkColor fg)
+   (GdkColor bg)))
+  
+(define-func gdk_pixmap_create_from_xpm
+  (GdkPixmap (copy #f))
+  ((GdkDrawable window)
+   ((ret GdkBitmap) mask (null-ok))
+   (GdkColor transparent_color (null-ok))
+   (string filename)))
+
+(define-func gdk_pixmap_colormap_create_from_xpm
+  (GdkPixmap (copy #f))
+  ((GdkDrawable window (null-ok))
+   (GdkColormap colormap (null-ok))
+   ((ret GdkBitmap) mask (null-ok))
+   (GdkColor transparent_color (null-ok))
+   (string filename)))
+
+(define-func gdk_pixmap_create_from_xpm_d_interp
+  (GdkPixmap (copy #f))
+  ((GdkDrawable window)
+   ((ret GdkBitmap) mask (null-ok))
+   (GdkColor transparent_color (null-ok))
+   ((cvecr string) data)))
+
+(define-func gdk_pixmap_colormap_create_from_xpm_d_interp
+  GdkPixmap
+  ((GdkDrawable window (null-ok))
+   (GdkColormap colormap (null-ok))
+   ((ret GdkBitmap) mask (null-ok))
+   (GdkColor transparent_color (null-ok))
+   ((cvecr string) data)))
+
+(define-func gdk_draw_pixmap
+  none
+  ((GdkDrawable drawable)
+   (GdkGC gc)
+   (GdkDrawable src)
+   (int xsrc)
+   (int ysrc)
+   (int xdest)
+   (int ydest)
+   (int width)
+   (int height)))
+
+(define-func gdk_set_locale
+  static_string
+  ())
+
+(define-func gdk_get_display
+  static_string
+  ())
+
+;; Gdk functions
+
+(define-func gdk_window_new_interp
+  (GdkWindow (copy #f))
+  ((GdkWindow parent (null-ok))
+   (int width)
+   (int height)
+   (GdkEventMask event_mask)
+   (GdkWindowClass window_class)
+   (GdkWindowType window_type)
+   (SCM rest)) ;; :title, :x, :y, :cursor, :colormap, :visual, :name, :class, 
+               ;; :override-redirect
+  (rest-arg #t))
+
+(define-func gdk_window_destroy_interp
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_at_pointer
+  (GdkWindow (values (x y)))
+  ((int x)
+   (int y)))
+
+(define-func gdk_window_show
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_hide
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_is_visible
+  bool
+  ((GdkWindow window)))
+
+(define-func gdk_window_is_viewable
+  bool
+  ((GdkWindow window)))
+
+(define-func gdk_window_withdraw
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_move
+  none
+  ((GdkWindow window)
+   (int x)
+   (int y)))
+
+(define-func gdk_window_resize
+  none
+  ((GdkWindow window)
+   (int width)
+   (int height)))
+
+(define-func gdk_window_move_resize
+  none
+  ((GdkWindow window)
+   (int x)
+   (int y)
+   (int width)
+   (int height)))
+
+(define-func gdk_window_reparent
+  none
+  ((GdkWindow window)
+   (GdkWindow new_parent)
+   (int x)
+   (int y)))
+
+(define-func gdk_window_clear
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_clear_area
+  none
+  ((GdkWindow window)
+   (int x)
+   (int y)
+   (int width)
+   (int height)))
+
+(define-func gdk_window_clear_area_e
+  none
+  ((GdkWindow window)
+   (int x)
+   (int y)
+   (int width)
+   (int height)))
+
+(define-func gdk_window_copy_area
+  none
+  ((GdkWindow window)
+   (GdkGC gc)
+   (int x)
+   (int y)
+   (GdkWindow source_window)
+   (int source_x)
+   (int source_y)
+   (int width)
+   (int height)))
+
+(define-func gdk_window_raise
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_lower
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_register_dnd
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_set_override_redirect
+  none
+  ((GdkWindow window)
+   (bool override_redirect)))
+
+(define-func gdk_window_shape_combine_mask
+  none
+  ((GdkWindow window)
+   (GdkBitmap shape_mask)
+   (int offset_x)
+   (int offset_y)))
+
+(define-func gdk_window_set_child_shapes
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_merge_child_shapes
+  none
+  ((GdkWindow window)))
+
+(define-func gdk_window_set_static_gravities
+  bool
+  ((GdkWindow window)
+   (bool use_static)))
+
+(define-func gdk_window_set_hints
+  none
+  ((GdkWindow window)
+   (int x) (int y)
+   (int min_width) (int min_height)
+   (int max_width) (int max_height)
+   (GdkWindowHints flags)))
+
+(define-func gdk_window_set_title
+  none
+  ((GdkWindow window)
+   (string title)))
+
+(define-func gdk_window_set_background
+  none
+  ((GdkWindow window)
+   (GdkColor  color)))
+
+(define-func gdk_window_set_back_pixmap
+  none
+  ((GdkWindow window)
+   (GdkPixmap pixmap (null-ok))
+   (bool      parent_relative)))
+
+(define-func gdk_window_set_cursor
+  none
+  ((GdkWindow window)
+   (GdkCursor cursor (null-ok))))
+
+(define-func gdk_window_set_colormap
+  none
+  ((GdkWindow window)
+   (GdkColormap colormap)))
+
+(define-func gdk_window_get_geometry
+  (none (values (x y width height depth)))
+  ((GdkWindow window)
+   (int x)
+   (int y)
+   (int width)
+   (int height)
+   (int depth)))
+
+(define-func gdk_window_set_geometry_hints_interp
+  none
+  ((GdkWindow window)
+   (SCM rest))
+  (rest-arg #t))
+
+(define-func gdk_window_get_position_interp
+  SCM
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_root_origin_interp
+  SCM
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_size_interp
+  SCM
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_visual
+  GdkVisual
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_colormap
+  GdkColormap
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_type
+  GdkWindowType
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_origin_interp
+  SCM
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_deskrelative_origin_interp
+  SCM
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_pointer
+  (GdkWindow (values (x y modifiers)))
+  ((GdkWindow window)
+   (int x)
+   (int y)
+   (GdkModifierType modifiers)))
+
+(define-func gdk_window_get_parent
+  GdkWindow
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_toplevel
+  GdkWindow
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_children_interp
+  SCM ;; list of GdkWindow
+  ((GdkWindow window)))
+
+(define-func gdk_window_get_events
+  GdkEventMask
+  ((GdkWindow window)))
+
+(define-func gdk_window_set_events
+  none
+  ((GdkWindow window)
+   (GdkEventMask events)))
+
+(define-func gdk_window_set_icon
+  none
+  ((GdkWindow window)
+   (GdkWindow icon_window (null-ok))
+   (GdkPixmap pixmap (null-ok))
+   (GdkBitmap mask (null-ok))))
+
+(define-func gdk_window_set_icon_name
+  none
+  ((GdkWindow window)
+   (string name)))
+
+(define-func gdk_window_set_transient_for
+  none
+  ((GdkWindow window)
+   (GdkWindow leader)))
+
+(define-func gdk_window_set_role
+  none
+  ((GdkWindow window)
+   (string role)))
+
+(define-func gdk_window_set_group
+  none
+  ((GdkWindow window)
+   (GdkWindow leader)))
+
+(define-func gdk_window_set_decorations
+  none
+  ((GdkWindow window)
+   (GdkWMDecoration decorations)))
+
+(define-func gdk_window_set_functions
+  none
+  ((GdkWindow window)
+   (GdkWMFunction functions)))
+
+(define-func gdk_window_get_toplevels
+  ((list GdkWindow))
+  ())
+
+(define-func gdk_window_get_id
+  uint
+  ((GdkWindow window)))
+
+;; Gtk 2 docs caution against assuming anything about the reference count of
+;; the GdkFont returned by gdk_font_load or gdk_fontset_load.  But this is
+;; only that it might be more than 1 when a cached font is returned.  In all
+;; cases a reference has been added for the return to us (either an initial
+;; 1 or an increment), hence "copy #f".
+;;
+(define-func gdk_font_load
+  (GdkFont (copy #f))
+  ((string name)))
+
+(define-func gdk_fontset_load
+  (GdkFont (copy #f))
+  ((string fontset)))
+
+(define-func gdk_font_id
+  int
+  ((GdkFont font)))
+
+(define-func gdk_font_equal
+  bool
+  ((GdkFont fonta)
+   (GdkFont fontb)))
+
+(define-func gdk_flush
+  none
+  ())
+
+(define-func gdk_screen_width
+  int
+  ())
+
+(define-func gdk_screen_height
+  int
+  ())
+
+(define-func gdk_screen_width_mm
+  int
+  ())
+
+(define-func gdk_screen_height_mm
+  int
+  ())
+
+(define-func gdk_pointer_grab
+  int
+  ((GdkWindow window)
+   (bool owner_events)
+   (GdkEventMask event_mask)
+   (GdkWindow confine_to (null-ok))
+   (GdkCursor cursor (null-ok))
+   (sgtk_timestamp time)))
+
+(define-func gdk_pointer_ungrab
+  none
+  ((sgtk_timestamp time)))
+
+(define-func gdk_pointer_is_grabbed
+  bool
+  ())
+
+(define-func gdk_keyboard_grab
+  int
+  ((GdkWindow window)
+   (bool owner_events)
+   (sgtk_timestamp time)))
+
+(define-func gdk_keyboard_ungrab
+  none
+  ((sgtk_timestamp time)))
+
+;; Gone in Gtk 2.0.
+;;
+;; (define-func gdk_key_repeat_disable
+;;   none
+;;   ())
+;; (define-func gdk_key_repeat_restore
+;;   none
+;;   ())
+
+(define-func gdk_error_trap_push
+  none
+  ())
+
+(define-func gdk_error_trap_pop
+  int
+  ())
+
+;; beep 
+
+(define-func gdk_beep
+  none
+  ())
+
+;; Color
+
+(define-func gdk_colormap_new
+  (GdkColormap (copy #f))
+  ((GdkVisual visual)
+   (bool allocate)))
+
+(define-func gdk_colormap_get_system
+  GdkColormap
+  ())
+
+(define-func gdk_colormap_get_system_size
+  int
+  ())
+
+(define-func gdk_colormap_change
+  none
+  ((GdkColormap colormap)
+   (int ncolors)))
+
+;; Gone private (static within gdkcolor-x11.c) in Gtk 2.
+;;
+;; (define-func gdk_colormap_sync
+;;   none
+;;   ((GdkColormap colormap)
+;;    (bool force)))
+
+(define-func gdk_colormap_alloc_colors_interp
+  (int (values (success)))
+  ((GdkColormap colormap)
+   (SCM colors)	      ;; list or vector of GdkColors (or strings)
+   (bool writable)
+   (bool best_match)
+   (SCM success)))    ;; return list of bools
+
+(define-func gdk_colormap_alloc_color
+  bool
+  ((GdkColormap colormap)
+   (GdkColor color)
+   (bool writeable)
+   (bool best_match)))
+
+(define-func gdk_colormap_free_colors_interp
+  none
+  ((GdkColormap colormap)
+   (SCM colors)))			; list or vector of GdkColor
+
+(define-func gdk_colormap_query_color
+  none
+  ((GdkColormap colormap)
+   (ulong pixel)
+   (GdkColor result)))
+
+(define-func gdk_colormap_get_visual
+  GdkVisual
+  ((GdkColormap colormap)))
+
+(define-func gdk_color_new
+  (GdkColor (copy #f))
+  ())
+
+(define-func gdk_color_white_interp
+  (GdkColor (copy #f))
+  ((GdkColormap colormap)))
+
+(define-func gdk_color_black_interp
+  (GdkColor (copy #f))
+  ((GdkColormap colormap)))
+
+(define-func gdk_color_parse_interp
+  (GdkColor (copy #f))
+  ((string spec)))
+
+(define-func gdk_color_change
+  bool
+  ((GdkColormap colormap)
+   (GdkColor color)))
+
+(define-func gdk_color_equal
+  bool
+  ((GdkColor colora)
+   (GdkColor colorb)))
+
+(define-func gdk_color_hash
+  uint
+  ((GdkColor color)))
+
+(define-func gdk_string_extents
+  (none (values (lbearing rbearing width ascent descent)))
+  ((GdkFont font)
+   (string string)
+   (int lbearing)
+   (int rbearing)
+   (int width)
+   (int ascent)
+   (int descent)))
+
+(define-func gdk_string_height
+  int
+  ((GdkFont font)
+   (string str)))
+
+(define-func gdk_text_height_interp
+  int
+  ((GdkFont font)
+   (SCM text)))				; string
+
+(define-func gdk_char_height
+  int
+  ((GdkFont font)
+   (char character)))
+
+(define-func gdk_text_extents_interp
+  (none (values (lbearing rbearing width ascent descent)))
+  ((GdkFont font)
+   (SCM text)				; string
+   (int lbearing)
+   (int rbearing)
+   (int width)
+   (int ascent)
+   (int descent)))
+
+(define-func gdk_text_extents_wc
+  (none (values (lbearing rbearing width ascent descent)))
+  ((GdkFont font)
+   ((cvecr GdkWChar) text)
+   (int lbearing)
+   (int rbearing)
+   (int width)
+   (int ascent)
+   (int descent)))
+
+(define-func gdk_event_new
+  (GdkEvent (copy #f))
+  ((GdkEventType type)))
+
+(define-func gdk_events_pending
+  bool
+  ())
+
+(define-func gdk_event_get
+  (GdkEvent (copy #f))
+  ())
+
+(define-func gdk_event_peek
+  (GdkEvent (copy #f))
+  ())
+
+(define-func gdk_event_get_graphics_expose
+  (GdkEvent (copy #f))
+  ((GdkWindow window)))
+
+(define-func gdk_event_put
+  none
+  ((GdkEvent event)))
+
+(define-func gdk_event_get_time
+  uint
+  ((GdkEvent event)))
+
+(define-func gdk_event_send_client_message
+  bool
+  ((GdkEvent event)
+   (uint32 xid)))
+
+(define-func gdk_event_send_clientmessage_toall
+  none
+  ((GdkEvent event)))
+
+;; Not yet working.
+;;
+;; (define-func gdk_add_client_message_filter_interp
+;;   none
+;;   ((atom message_type)
+;;    (SCM filter_proc)))
+
+(define-func gdk_get_show_events
+  int
+  ())
+
+(define-func gdk_set_show_events
+  none
+  ((bool show_events)))
+
+(define-func gdk_event_type
+  GdkEventType
+  ((GdkEvent event)))
+
+(define-func gdk_event_window
+  GdkWindow
+  ((GdkEvent event)))
+
+(define-func gdk_event_send_event
+  bool
+  ((GdkEvent event)))
+
+(define-func gdk_event_area
+  rect
+  ((GdkEvent event)))
+
+(define-func gdk_event_count
+  int
+  ((GdkEvent event)))
+
+(define-func gdk_event_visibility_state
+  GdkVisibilityState
+  ((GdkEvent event)))
+
+(define-func gdk_event_time
+  uint
+  ((GdkEvent event)))
+
+(define-func gdk_event_x
+  double
+  ((GdkEvent event)))
+
+(define-func gdk_event_y
+  double
+  ((GdkEvent event)))
+
+;; Fields gone in Gtk 2.0.
+;;
+;; (define-func gdk_event_pressure
+;;   double
+;;   ((GdkEvent event)))
+;;
+;; (define-func gdk_event_xtilt
+;;   double
+;;   ((GdkEvent event)))
+;;
+;; (define-func gdk_event_ytilt
+;;   double
+;;   ((GdkEvent event)))
+
+(define-func gdk_event_button
+  int
+  ((GdkEvent event)))
+
+(define-func gdk_event_state
+  GdkModifierType
+  ((GdkEvent event)))
+
+(define-func gdk_event_is_hint
+  bool
+  ((GdkEvent event)))
+
+(define-func gdk_event_source
+  GdkInputSource
+  ((GdkEvent event)))
+
+;; Gone in Gtk 2.0, could change to gdk_event_device returning GdkDevice.
+;;
+;; (define-func gdk_event_deviceid
+;;   uint
+;;   ((GdkEvent event)))
+
+(define-func gdk_event_x_root
+  double
+  ((GdkEvent event)))
+
+(define-func gdk_event_y_root
+  double
+  ((GdkEvent event)))
+
+(define-func gdk_event_keyval
+  uint
+  ((GdkEvent event)))
+
+(define-func gdk_event_string
+  SCM ;; string or #f
+  ((GdkEvent event)))
+
+(define-func gdk_event_subwindow
+  GdkWindow
+  ((GdkEvent event)))
+
+(define-func gdk_event_crossing_mode
+  GdkCrossingMode
+  ((GdkEvent event)))
+
+(define-func gdk_event_notify_detail
+  GdkNotifyType
+  ((GdkEvent event)))
+
+(define-func gdk_event_focus
+  bool
+  ((GdkEvent event)))
+
+(define-func gdk_event_in
+  bool
+  ((GdkEvent event)))
+
+(define-func gdk_event_configure_x
+  int
+  ((GdkEvent event)))
+
+(define-func gdk_event_configure_y
+  int
+  ((GdkEvent event)))
+
+(define-func gdk_event_configure_width
+  int
+  ((GdkEvent event)))
+
+(define-func gdk_event_configure_height
+  int
+  ((GdkEvent event)))
+
+(define-func gdk_event_atom
+  atom
+  ((GdkEvent event)))
+
+(define-func gdk_event_selection
+  atom
+  ((GdkEvent event)))
+
+(define-func gdk_event_target
+  atom
+  ((GdkEvent event)))
+
+(define-func gdk_event_property
+  atom
+  ((GdkEvent event)))
+
+(define-func gdk_event_requestor
+  uint
+  ((GdkEvent event)))
+
+(define-func gdk_event_drag_context
+  GdkDragContext
+  ((GdkEvent event)))
+
+(define-func gdk_event_message_type
+  atom
+  ((GdkEvent event)))
+
+(define-func gdk_event_message
+  SCM					; vector of integers
+  ((GdkEvent event)))
+
+(define-func gdk_get_leader_window_id
+  uint
+  ())
+
+;; Key values
+
+(define-func gdk_keyval_name
+  static_string
+  ((uint keyval)))
+
+(define-func gdk_keyval_from_name
+  uint
+  ((string keyval_name)))
+
+(define-func gdk_keyval_to_upper
+  uint
+  ((uint keyval)))
+
+(define-func gdk_keyval_to_lower
+  uint
+  ((uint keyval)))
+
+(define-func gdk_keyval_is_upper
+  bool
+  ((uint keyval)))
+
+(define-func gdk_keyval_is_lower
+  bool
+  ((uint keyval)))
+
+;;; glib functions - timer
+
+(define-func g_timer_new
+  (GTimer (copy #f))
+  ())
+
+(define-func g_timer_start
+  none
+  ((GTimer	timer)))
+
+(define-func g_timer_stop
+  none
+  ((GTimer	timer)))
+
+(define-func g_timer_reset
+  none
+  ((GTimer	timer)))
+
+(define-func g_timer_elapsed
+  (double (values (microseconds)))
+  ((GTimer	timer)
+   (long	microseconds)))
+
+;;; Threads
+
+(define-func gdk_threads_enter
+  none
+  ()
+  (undeferred #t))
+
+(define-func gdk_threads_leave
+  none
+  ()
+  (undeferred #t))
+
+;; gdkrgb
+
+(define-func gdk_rgb_init
+  none
+  ())
+
+(define-func gdk_draw_rgb_image_interp
+  none
+  ((GdkDrawable drawable)
+   (GdkGC gc)
+   (int x) (int y) (int w) (int h)
+   (GdkRgbDither dith)
+   (raw-data-r rgb_buf)
+   (int rowstride)))
+
+(define-func gdk_draw_rgb_image_dithalign_interp
+  none
+  ((GdkDrawable drawable)
+   (GdkGC gc)
+   (int x) (int y) (int w) (int h)
+   (GdkRgbDither dith)
+   (raw-data-r rgb_buf)
+   (int rowstride)
+   (int xdith)
+   (int ydith)))
+
+(define-func gdk_draw_indexed_image_interp
+  none
+  ((GdkDrawable drawable)
+   (GdkGC gc)
+   (int x) (int y) (int w) (int h)
+   (GdkRgbDither dith)
+   (raw-data-r index_buf)
+   (int rowstride)
+   (GdkRgbCmap cmap)))
+
+(define-func gdk_draw_gray_image_interp
+  none
+  ((GdkDrawable drawable)
+   (GdkGC gc)
+   (int x) (int y) (int w) (int h)
+   (GdkRgbDither dith)
+   (raw-data-r gray_buf)
+   (int rowstride)))
+
+(define-func gdk_draw_rgb_32_image_interp
+  none
+  ((GdkDrawable drawable)
+   (GdkGC gc)
+   (int x) (int y) (int w) (int h)
+   (GdkRgbDither dith)
+   (raw-data-r rgb_32_buf)
+   (int rowstride)))
+
+(define-func gdk_rgb_cmap_new_interp
+  (GdkRgbCmap (copy #f))
+  (((cvecr uint32) colors)))		; 0x00RRGGBB
+
+(define-func gdk_rgb_gc_set_foreground_interp
+  none
+  ((GdkGC gc)
+   (uint32 rgb)))			; 0x00RRGGBB
+
+(define-func gdk_rgb_gc_set_background_interp
+  none
+  ((GdkGC gc)
+   (uint32 rgb)))			; 0x00RRGGBB
+
+(define-func gdk_rgb_set_install_interp
+  none
+  ((bool install)))
+
+(define-func gdk_rgb_set_min_colors_interp
+  none
+  ((int min_colors)))
+
+(define-func gdk_rgb_get_cmap_interp
+  GdkColormap
+  ())
+
+(define-func gdk_rgb_get_visual_interp
+  GdkVisual
+  ())
+
+(define-func gdk_rgb_ditherable_interp
+  bool
+  ())
+
+(define-func gdk_rgb_set_verbose_interp
+  none
+  ((bool verbose)))
+
+(define-func gdk_rgb_xpixel_from_rgb
+  ulong
+  ((uint32 rgb)))
+
+(define-func gdk_query_depths_interp
+  SCM					; list of int
+  ())
+
+(define-func gdk_query_visual_types_interp
+  SCM					; list of GdkVisualType
+  ())
+
+(define-func gdk_list_visuals_interp
+  SCM ;; list of GdkVisual
+  ())
+
+(define-func gdk_visual_get_best_depth
+  int
+  ())
+
+(define-func gdk_visual_get_best_type
+  GdkVisualType
+  ())
+
+(define-func gdk_visual_get_system
+  GdkVisual
+  ())
+
+(define-func gdk_visual_get_best
+  GdkVisual
+  ())
+
+(define-func gdk_visual_get_best_with_depth
+  GdkVisual
+  ((int depth)))
+
+(define-func gdk_visual_get_best_with_type
+  GdkVisual
+  ((GdkVisualType visual_type)))
+
+(define-func gdk_visual_get_best_with_both
+  GdkVisual
+  ((int depth)
+   (GdkVisualType visual_type)))
+
+(define-func gdk_selection_owner_set
+  int
+  ((GdkWindow owner)
+   (atom selection)
+   (sgtk_timestamp time)
+   (bool send_event)))
+
+(define-func gdk_selection_owner_get
+  GdkWindow
+  ((atom selection)))
+
+(define-func gdk_selection_convert
+  none
+  ((GdkWindow requestor)
+   (atom selection)
+   (atom target)
+   (sgtk_timestamp time)))
+
+(define-func gdk_selection_property_get_interp
+  (SCM (values (prop_type prop_format)))
+  ((GdkWindow requestor)
+   (atom prop_type)
+   (int prop_format)))
+
+(define-func gdk_property_change_interp
+  none
+  ((GdkWindow window)
+   (atom property)
+   (atom type)
+   (int format)
+   (GdkPropMode mode)
+   (SCM data))) ; integer list, integer vector or string
+
+(define-func gdk_selection_send_notify
+  none
+  ((uint32 requestor)
+   (atom selection)
+   (atom target)
+   (atom property)
+   (sgtk_timestamp time)))
+
+(define-func gdk_text_property_to_text_list_interp
+  SCM					; list of string or #f
+  ((atom encoding)
+   (int format)
+   (SCM text)))				; string
+
+;; The return value is only documented as zero for success or non-zero for
+;; failure, though in fact a negative is an Xlib error code or positive is a
+;; count of failed characters.  Not sure if applications will find a use for
+;; that, but we may as well include it in our return.
+;;
+(define-func gdk_string_to_compound_text_interp
+  (int (values (encoding format ctext)))
+  ((string str)
+   (atom encoding)
+   (int format)
+   (SCM ctext)))  ;; string or #f
+
+(define-func gdk_atom_intern
+  atom
+  ((cstring atom_name)
+   (bool only_if_exists)))
+
+(define-func gdk_atom_name
+  string
+  ((atom atom)))
+
+(define-func gdk_property_get_interp
+  (SCM (values (actual_property actual_format)))
+  ((GdkWindow window (null-ok))
+   (atom property)
+   (atom type)
+   (ulong offset)
+   (ulong length)
+   (bool pdelete)
+   (atom actual_property)
+   (int actual_format)))
+
+;; not done yet
+; (define-func gdk_property_change_interp
+;   none
+;   ((GdkWindow window (null-ok))
+;    (atom property)
+;    (atom type)
+;    (int format)
+;    (GdkPropMode mode)
+;    ; data is a string, or a vector or list of numbers or characters
+;    (SCM data)))
+
+(define-func gdk_property_delete
+  none
+  ((GdkWindow window (null-ok))
+   (atom property)))
+
+;; PANGO
+
+(define-func PANGO_PIXELS
+  int
+  ((int d)))
+
+(define-func PANGO_PIXELS_FLOOR
+  int
+  ((int d)))
+
+(define-func PANGO_PIXELS_CEIL
+  int
+  ((int d)))
+
+
+;; PangoLanguage
+
+(define-boxed PangoLanguage
+  (copy gtk_fake_copy)
+  (free gtk_no_free))
+
+;; PangoFontDescription
+
+(define-boxed PangoFontDescription
+  (copy pango_font_description_copy)
+  (free pango_font_description_free))
+
+;; PangoFontMetrics
+
+(define-boxed PangoFontMetrics
+  (copy pango_font_metrics_ref)
+  (free pango_font_metrics_unref))
+
+(define-func pango_font_metrics_get_ascent
+  int
+  ((PangoFontMetrics metrics)))
+
+(define-func pango_font_metrics_get_descent
+  int
+  ((PangoFontMetrics metrics)))
+
+;; PangoContext
+
+(define-object PangoContext (GObject))
+
+(define-func pango_context_get_metrics
+  (PangoFontMetrics (copy #t))
+  ((PangoContext context)
+   (PangoFontDescription desc)
+   (PangoLanguage language (null-ok))))
+
+(define-func pango_context_get_language
+  PangoLanguage
+  ((PangoContext context)))
+
+(define-func pango_context_get_font_description
+  (PangoFontDescription (copy #t))
+  ((PangoContext context)))
+
+;; PangoLayout
+
+(define-object PangoLayout (GObject))
+
+(define-func pango_layout_new
+  (PangoLayout (copy #f))
+  ((PangoContext context)))
+
+(define-func pango_layout_get_context
+  PangoContext
+  ((PangoLayout layout)))
+
+(define-func pango_layout_get_font_description
+  (PangoFontDescription (copy #t))
+  ((PangoLayout layout)))
+
+(define-func pango_layout_get_text
+  static_string
+  ((PangoLayout layout)))
+
+(define-func pango_layout_set_text
+  none
+  ((PangoLayout layout)
+   (string text)
+   (int len (= -1))))
+
+(define-func pango_layout_get_size
+  (none (values (width height)))
+  ((PangoLayout layout)
+   (int width)
+   (int height)))
+
+(define-func pango_layout_get_pixel_size
+  (none (values (width height)))
+  ((PangoLayout layout)
+   (int width)
+   (int height)))
+
+(define-func gdk_draw_layout
+  none
+  ((GdkDrawable drawable)
+   (GdkGC gc)
+   (int x)
+   (int y)
+   (PangoLayout layout)))
+
+(define-func gdk_draw_layout_with_colors
+  none
+  ((GdkDrawable drawable)
+   (GdkGC gc)
+   (int x)
+   (int y)
+   (PangoLayout layout)
+   (GdkColor foreground (null-ok))
+   (GdkColor background (null-ok))))
+
+;; Options
+
+(options
+ (includes "#include <gdk/gdk.h>"
+	   "#include <gdk/gdkrgb.h>"
+	   "#include <gdk/gdkx.h>"
+	   "
+/* These macros not in pango 1.8.1 which comes with gtk 2.6.7 */
+#ifndef PANGO_PIXELS_FLOOR
+#define PANGO_PIXELS_FLOOR(d) (((int)(d)) >> 10)
+#endif
+#ifndef PANGO_PIXELS_CEIL
+#define PANGO_PIXELS_CEIL(d) (((int)(d) + 1023) >> 10)
+#endif")
+
+ (init-func "sgtk_init_gtk_gdk_glue")
+ (extra-init-code "sgtk_init_gdk_support ();"))

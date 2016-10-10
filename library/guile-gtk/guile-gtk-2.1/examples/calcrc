@@ -1,0 +1,38 @@
+;; Copyright (C) 1997 Free Software Foundation, Inc.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 3 of
+;; the License, or (at your option) any later version.
+;; 
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;; 
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;
+;; Time-stamp: <1998-03-15 21:20:17 szi>
+;;
+;; Example resource file for calc.scm
+;;
+;; Copy this file into your HOME directory and name it ".calcrc". It
+;; will be read by Calc.scm during startup.
+;;
+
+(define complex-panel
+  (calc-panel
+   (("i"    (lambda () 0+1i) 0)
+    ("conj" (lambda (a) (+ (real-part a) (* (imag-part a) 0-1i))) 1)
+    ("re"   real-part 1)
+    ("im"   imag-part 1)
+    ("arg"  angle 1)
+    ("abs"  magnitude 1))))
+  
+(set! calc-panels (cons complex-panel calc-panels))
+
+; Local Variables:
+; mode: scheme
+; End:

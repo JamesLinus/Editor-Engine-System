@@ -1,0 +1,299 @@
+Copyright (C) 1998, 1999, 2000, 2003, 2006 Free Software Foundation, Inc.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+
+README for guile-gtk
+********************
+
+This is some glue code to make Gtk accessible from Guile (1.6.4 or up).
+It provides a convenient interface for Scheme programmers to develop
+graphical user interfaces.  This version of guile-gtk is stripped down
+and intended for people who want to use Gtk 2.0 without Gnome.
+
+Guile-gtk is free software licensed under the GPL and is part of the
+GNU Project.
+
+New versions of this package will be available from
+
+    http://www.gnu.org/software/guile-gtk/
+
+You can also get at the most recent development sources from the Savannah
+CVS repository at
+
+    http://savannah.gnu.org/projects/guile-gtk/
+
+
+Table of Contents
+
+   - Acknowledgements
+   - Bugs
+   - Mailing List
+   - Gtk versions
+   - Installing
+   - Testing
+   - Wrapping Your Own Widgets      
+   - Composite Types and `call-by-reference'
+   - Documentation
+
+
+Acknowledgements
+----------------
+
+Many people have contributed to guile-gtk by now.  Many thanks to all
+of them!  Please refer to the ChangeLog for details.
+
+Bugs
+----
+
+The main aim still is robustness, with an eye towards completeness.  It
+should not be possible to crash your program from Scheme.  Guile-gtk
+has to cope with anything.  So if you find that your program crashes
+and you think it is due to a bug in your Scheme code, you have
+actually found a bug in guile-gtk or Gtk.
+
+Please report these bugs to <guile-gtk-general@gnu.org>.
+
+Mailing List
+------------
+
+There is currently one mailing list for guile-gtk that is used for
+everything.  More details can be found at
+
+    http://savannah.gnu.org/mail/?group=guile-gtk
+
+Gtk Versions
+------------
+
+This version of guile-gtk only supports Gtk 2.0.  Past versions of
+guile-gtk supported Gtk 1.2 and can still be used.  For Gnome support
+try the guile-gnome project at
+
+    http://www.gnu.org/software/guile-gnome
+
+Installing
+----------
+
+See INSTALL for generic installation instructions.  You will need
+Guile 1.6.4 or higher, and a C compiler.
+
+This package will build and install a new shared library,
+"libguilegtk-2.0", that contains the glue between Guile and Gtk+.
+This library is used to implement most of the (gtk-2.0 gtk) and
+(gtk-2.0 gdk) modules.
+
+The package will also install "build-guile-gtk-2.0", a program for
+generating glue code for arbitrary *.defs files.
+
+NOTE: This package installs its Scheme code in a location determined
+by the prefix given to the configure script.  It does not pay
+attention to where your Guile is installed.  When Guile and this
+package are installed under the same prefix, everything is fine.  When
+you use a different prefix for this package, you need to make sure
+that Guile knows about this location.  For example, when you install
+this package under /usr/local/stuff/guile-gtk, you may want to add
+GUILE_LOAD_PATH=/usr/local/stuff/guile-gtk/share/guile to your
+environment.  Or you might want to make some symlinks.  This package
+does not try to be clever about these issues, as there are too many
+variations and potential solutions.
+
+Testing
+-------
+
+The usual "make check" will run some tests.  You will need an X
+display.  After installing the example programs can be tried, for
+instance
+
+	cd examples
+	guile -s test-gtk.scm
+
+should pop up a familiar pile of buttons.  Not every test has been
+implemented, tho.  All unexpected behaviour is probably a bug and we
+would be glad if you would tell us about it.
+
+Wrapping Your Own Widgets
+-------------------------
+
+There is a complete autoconfed/automade example for this.
+
+After installing the guile-gtk package, change to the examples/foo/
+directory:
+
+  % cd examples/foo
+  % aclocal
+  % autoconf
+  % automake -a
+  % ./configure
+  % make
+
+Again: you need to have guile-gtk installed for this to work!
+
+Now you should have a new module `(gtk-2.0 foo)'.  You can test it
+thus:
+
+  % guile -s test-foo.scm
+
+Here is the general procedure:
+
+When you have some Gtk widgets that are not described in gtk-2.0.defs
+or gdk-2.0.defs, you can use build-guile-gtk to automatically generate
+glue code for them.  Here is how to wrap the hypothetical GtkFoo
+widget and its related function gtk-foo-new.  They are assumed to live
+in gtkfoo.h and libfoo.
+
+- Write the foo.defs file
+
+  ;; We use the types defined in gtk-2.0.defs
+  (import "gtk-2.0.defs")
+
+  (define-object GtkFoo (GtkWidget))
+
+  (define-func gtk_foo_new
+    GtkFoo
+    ())
+
+  (options
+    ;; Includes needed to compile code that uses GtkFoo.
+    (includes "#include <gtkfoo.h>")
+    ;; The name of the generated initialization function.
+    (init-func "foo_init_glue")
+    ;; Libraries needed to link. libguile-gtk-foo will contain
+    ;; the glue code and libfoo contains the widget itself.
+    (libs "-lguile-gtk-foo -lfoo"))
+
+- Write the foo.scm file
+
+  (define-module (gtk-2.0 foo)
+    :use-module (gtk-2.0 dynlink))
+
+  ;; Call the init function, either using a pre-linked -lguilefoo or
+  ;; dynamically linking it.
+  (merge-compiled-code "foo_init_glue" "libguile-gtk-foo")
+
+- Generate the glue code
+
+  % build-guile-gtk-2.0 glue foo.defs >foo-glue.c
+
+- Compile the glue code into a shared library, using libtool
+
+  [This will be simplified and then explained.  Right now, keep in
+   mind to use gtk-config and build-guile to get all necessary flags and
+   libraries.]
+
+  % libtool --mode=link ... -o libguile-gtk-foo.la ...
+
+- Install the shared library, again using libtool.
+
+  % libtool --mode=install cp libguile-gtk-foo.la <exec_prefix>/lib/
+
+- Install the foo.scm file
+
+  % cp foo.scm <prefix>/share/guile/gtk-2.0/foo.scm
+
+- Install the *.defs files for other people to use.
+
+  % cp foo.defs foo.defs.guile <prefix>/share/guile-gtk/
+
+Now you should be able to just (use-modules (gtk-2.0 foo)).
+
+Composite Types and `call-by-reference'
+---------------------------------------
+
+Guile-gtk has (still experimental) support for composite types like
+lists and vectors.  On the Gtk+ side, the types GSList (singly linked
+list), GList (doubly linked list), and counted and fixed length
+vectors are supported.  On the Scheme side, you can use Scheme lists
+and Scheme vectors.  You can mix these types freely.  That is, you can
+use a list on the Scheme side to represent a vector on the Gtk+ side,
+and vice versa.
+
+Composite types have modes associated with them.  They can be `in',
+`out', or `inout'.  When a composite type is marked with a `in' mode,
+the Gtk+ side is not allowed to make changes to the contents of the
+composite.  When it is `out', it must initialize the contents before
+it returns and is not allowed to read it prior to initialization.
+Consequently, mode `inout' indicates that the Gtk+ side may both read
+and write the composite freely, and that the contents has been
+initialized by the caller.  On the Scheme side, mode `out' turns off
+type checking for the contents of composites and the initial values of
+the composite passed to Gtk+ will be undefined.
+
+The default mode is `in'.
+
+The available variations are:
+
+  [ *.defs file syntax ]             [ C side function arguments ]
+  [ Comment ]
+
+  (slist <type> [<mode>])            GSList *lst
+  For singly linked lists.  Scheme owns the memory of the list nodes.
+
+  (list <type> [<mode>])             GList *lst
+  For doubly linked lists.  Scheme owns the memory of the list nodes.
+
+  (cvec <type> [<mode>])             int len, <type>* vec
+  For counted vectors.  The length of the Scheme composite is passed
+  to the Gtk+ function.  Scheme owns the memory of the vector.
+
+  (cvecr <type> [<mode>])            <type>* vec, int len
+  For counted vectors, reverse order of arguments.  Scheme owns the
+  memory of the vector.
+
+  (fvec <type> <len> [<mode>])       <type>* vec
+  For fixed length vectors.  The Scheme composite must be of length <len>.
+  Scheme owns the memory of the vector.
+  
+  (ret <type>)                       <type>* vec
+  Abbreviation for (fvec <type> 1 out)
+
+These composite types are also intended to be used for
+call-by-reference arguments.  Neither Scheme nor C really has these
+call-by-reference arguments, so guile-gtk wont either.  In C, you
+would pass a pointer to the desired object; in Scheme you use a
+one-element list or a vector of length one.  For guile-gtk, these
+types are modelled with a `fvec' composite type of length one and mode
+out, or equivalently but shorter with the `ret' type.
+
+For example, when you have a Gtk+ function with a prototype like
+
+    void gtk_foo (char **strptr);
+
+that deposits some string in *STRPTR (whose memory should be taken
+over by the caller), you can wrap it like this:
+
+     (define-func gtk_foo
+       none
+       ((ret string) strptr))
+
+Usage is a little cumbersome from Scheme.  This code snippet
+
+     (let ((strptr (list #f)))
+       (gtk-foo strptr)
+       (car strptr))
+
+would yield the returned string.
+
+
+Documentation
+-------------
+
+Documentation can be found in guile-gtk.texi.
+
+Have fun!
+
+Marius Vollmer
+Ariel Rios
+

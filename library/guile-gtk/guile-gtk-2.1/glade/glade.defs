@@ -1,0 +1,139 @@
+;; -*- scheme -*- 
+
+;; Copyright (C) 2003, 2006 Free Software Foundation, Inc.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 3 of
+;; the License, or (at your option) any later version.
+;; 
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;; 
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+(import "gtk-2.0.defs")
+
+;;glade.h
+
+(define-func glade_init
+  none
+  ())
+
+(define-func glade_gnome_init
+  none
+  ())
+
+(define-func glade_bonobo_init
+  none
+  ())
+
+(define-func glade_gnome_db_init
+  none
+  ())
+
+;; Gone in Glade 2.0.
+;;
+;; (define-func glade_load_module
+;;   none
+;;   ((string	module)))
+
+;;glade-xml.h
+
+(define-object GladeXML (GObject)
+  (fields
+   (string filename)
+   ;; no longer a public field in Glade 2.0
+   ;; (string txtdomain)
+   ))
+
+
+(define-func glade_xml_new
+  GladeXML
+  ((string fname)
+   (string root (="NULL"))
+   (string domain (="NULL"))))
+
+;(define-func glade_xml_new_width_domain
+;  GladeXML
+;  ((string fname)
+;   (string root)
+;   (string domain)))
+
+(define-func glade_xml_new_from_memory
+  GladeXML
+  ((string buffer)
+   (int size)
+   (string root)
+   (string domain)))
+
+(define-func glade_xml_construct
+  bool
+  ((GladeXML self)
+   (string fname)
+   (string root)
+   (string domain)))
+
+;(define-func glade_xml_signal_connect
+;  none
+;  ((GladeXML self)
+;   (string handlername)
+;   (GtkSignalFunc func)))
+
+(define-func glade_xml_signal_autoconnect
+  none
+  ((GladeXML self)))
+
+(define-func glade_xml_signal_connect_full_hack
+  none
+  ((GladeXML self)
+   (string   handlername)
+   (SCM	     func (= SCM_BOOL_F)))
+  (scm-name  "glade-xml-signal-connect-full"))
+
+(define-func glade_xml_signal_autoconnect_full_hack
+  none
+  ((GladeXML self)
+   (SCM	     func  (= SCM_BOOL_F)))
+  (scm-name "glade-xml-signal-autoconnect-full"))
+
+(define-func glade_xml_get_widget
+  GtkWidget
+  ((GladeXML self)
+   (string name)))
+
+;; Gone in Glade 2.0.
+;;
+;; (define-func glade_xml_get_widget_by_long_name
+;;   GtkWidget
+;;   ((GladeXML self)
+;;    (string longname)))
+
+(define-func glade_xml_relative_file
+  string
+  ((GladeXML self)
+   (string filename)))
+
+(define-func glade_get_widget_name 
+  static_string
+  ((GtkWidget widget)))
+
+;; Gone in Glade 2.0.
+;;
+;; (define-func glade_get_widget_long_name
+;;   static_string
+;;   ((GtkWidget widget)))
+
+(define-func glade_get_widget_tree
+  GladeXML
+  ((GtkWidget widget)))
+
+;;;;glade-build
+  
+(options 
+ (includes "#include <glade/glade.h>"
+	   "#include \"glade-support.h\"")
+ (init-func "sgtk_init_gtk_glade_glue"))

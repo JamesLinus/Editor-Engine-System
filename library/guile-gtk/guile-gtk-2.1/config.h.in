@@ -1,0 +1,108 @@
+/* config.h.in.  Generated from configure.ac by autoheader.  */
+
+/*
+
+Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
+Free Software Foundation, Inc.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the `glade_bonobo_init' function. */
+#undef HAVE_GLADE_BONOBO_INIT
+
+/* Define to 1 if you have the `glade_gnome_db_init' function. */
+#undef HAVE_GLADE_GNOME_DB_INIT
+
+/* Define to 1 if you have the `glade_gnome_init' function. */
+#undef HAVE_GLADE_GNOME_INIT
+
+/* Define to 1 if you have the `gtk_signal_set_class_function_full' function.
+   */
+#undef HAVE_GTK_SIGNAL_SET_CLASS_FUNCTION_FULL
+
+/* Define to 1 if you have the `g_object_ref_sink' function. */
+#undef HAVE_G_OBJECT_REF_SINK
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <libguile/deprecation.h> header file. */
+#undef HAVE_LIBGUILE_DEPRECATION_H
+
+/* Define to 1 if you have the `mallinfo' function. */
+#undef HAVE_MALLINFO
+
+/* Define to 1 if you have the <malloc.h> header file. */
+#undef HAVE_MALLOC_H
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the `scm_c_issue_deprecation_warning' function. */
+#undef HAVE_SCM_C_ISSUE_DEPRECATION_WARNING
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define when you have the thread_create slot in GThreadFunctions */
+#undef HAVE_THREAD_CREATE
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* define if scm_mutex_init takes two arguments */
+#undef SCM_MUTEX_INIT_TWO_ARGS
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* Version number of package */
+#undef VERSION
